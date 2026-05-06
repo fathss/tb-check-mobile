@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tbcheck_app/core/theme/app_colors.dart';
+import 'package:tbcheck_app/features/auth/auth_page.dart';
 import 'widgets/landing_slide.dart';
 
 class LandingPage extends StatefulWidget {
@@ -168,9 +169,32 @@ class _LandingPageState extends State<LandingPage>
                             if (currentSlideIndex < slides.length - 1) {
                               setState(() => currentSlideIndex += 1);
                             } else {
-                              // Reached last slide (index 2): navigate to Login page
-                              // TODO: Navigator.of(context).pushReplacement(... to LoginPage);
-                              setState(() => currentSlideIndex = 0);
+                              // Navigate with simultaneous fade animations
+                              Navigator.of(context).push(
+                                PageRouteBuilder(
+                                  pageBuilder:
+                                      (
+                                        context,
+                                        animation,
+                                        secondaryAnimation,
+                                      ) => const AuthPage(),
+                                  transitionsBuilder:
+                                      (
+                                        context,
+                                        animation,
+                                        secondaryAnimation,
+                                        child,
+                                      ) {
+                                        return FadeTransition(
+                                          opacity: animation,
+                                          child: child,
+                                        );
+                                      },
+                                  transitionDuration: const Duration(
+                                    milliseconds: 500,
+                                  ),
+                                ),
+                              );
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -211,12 +235,6 @@ class _LandingPageState extends State<LandingPage>
                             'assets/images/heart_icon.png',
                             width: 32,
                             fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(
-                                  Icons.favorite,
-                                  size: 32,
-                                  color: AppColors.primary,
-                                ),
                           ),
                           const SizedBox(width: 8),
                           const Text(
