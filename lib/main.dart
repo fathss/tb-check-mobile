@@ -28,3 +28,7 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+// LandingPage (landing page + splash screen + auth page)
+// MainPage (home page Pasien)
+// AdminDashboardScreen (home page Admin)
