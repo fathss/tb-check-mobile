@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:tbcheck_app/core/theme/app_colors.dart';
+import 'package:tbcheck_app/features/admin_faskes/dashboard/screens/admin_dashboard_screen.dart';
 import 'package:tbcheck_app/features/landing/landing_page.dart';
+import 'features/admin_faskes/navigation/admin_main_navigation.dart';
 
 void main() {
   runApp(const MyApp());
@@ -9,16 +11,16 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'TBCheck',
+      title: 'TBCare Admin',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         fontFamily: "PlusJakartaSans",
         colorScheme: .fromSeed(seedColor: AppColors.primary),
       ),
-      home: const LandingPage(),
+      home: const AdminDashboardScreen(),
     );
   }
 }
