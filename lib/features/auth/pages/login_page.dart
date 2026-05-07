@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
-import '../../../core/theme/app_colors.dart';
-import '../widgets/auth_component.dart';
+import 'package:tbcheck_app/core/theme/app_colors.dart';
+import 'package:tbcheck_app/core/widgets/form_widget.dart';
 
 class LoginPage extends StatefulWidget {
   final VoidCallback onSignUpTap;
@@ -33,7 +33,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: AuthComponent(
+      body: FormWidget(
         titleText: 'Login to Your Account',
         fields: [
           AuthInputField(
