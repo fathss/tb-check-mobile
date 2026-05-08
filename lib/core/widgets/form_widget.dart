@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 
-class AuthComponent extends StatelessWidget {
+class FormWidget extends StatelessWidget {
   final String titleText;
   final List<Widget> fields;
   final String buttonText;
   final RichText footer;
   final VoidCallback onButtonPressed;
 
-  const AuthComponent({
+  const FormWidget({
     super.key,
     required this.titleText,
     required this.fields,

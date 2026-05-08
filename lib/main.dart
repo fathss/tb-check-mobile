@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tbcheck_app/core/theme/app_colors.dart';
 import 'package:tbcheck_app/features/admin_faskes/dashboard/screens/admin_dashboard_screen.dart';
 import 'package:tbcheck_app/features/landing/landing_page.dart';
+import 'package:tbcheck_app/features/user_profile/pages/complete_profile_page.dart';
 import 'features/admin_faskes/navigation/admin_main_navigation.dart';
 import 'package:tbcheck_app/core/navigation/main_page.dart';
 import 'package:tbcheck_app/features/home/home_page.dart';
@@ -30,5 +31,6 @@ class MyApp extends StatelessWidget {
 }
 
 // LandingPage (landing page + splash screen + auth page)
+// CompleteProfilePage (form isi profil)
 // MainPage (home page Pasien)
 // AdminDashboardScreen (home page Admin)
