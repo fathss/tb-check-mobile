@@ -25,11 +25,12 @@ class MyApp extends StatelessWidget {
         fontFamily: "PlusJakartaSans",
         colorScheme: .fromSeed(seedColor: AppColors.primary),
       ),
-      home: const CompleteProfilePage(),
+      home: const MainPage(),
     );
   }
 }
 
 // LandingPage (landing page + splash screen + auth page)
+// CompleteProfilePage (form isi profil)
 // MainPage (home page Pasien)
 // AdminDashboardScreen (home page Admin)
