@@ -42,4 +42,5 @@ class MyApp extends StatelessWidget {
 // LandingPage (landing page + splash screen + auth page)
 // CompleteProfilePage (form isi profil)
 // MainPage (home page Pasien)
+// AdminDashboardScreen (home page admin)
 // SuperAdminMainPage (home page super admin)
