@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tbcheck_app/core/theme/app_colors.dart';
 import 'package:tbcheck_app/core/widgets/custom_text_field.dart';
+import 'package:tbcheck_app/features/super_admin/widgets/custom_button.dart';
 
 class SuperAdminProfilePage extends StatelessWidget {
   const SuperAdminProfilePage({super.key});
@@ -21,11 +22,7 @@ class SuperAdminProfilePage extends StatelessWidget {
         appBar: AppBar(
           elevation: 0,
           backgroundColor: Colors.white,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            color: AppColors.textPrimary,
-            onPressed: () => Navigator.of(context).pop(),
-          ),
+          titleSpacing: 20,
           title: const Text(
             'Profil Saya',
             style: TextStyle(
@@ -103,6 +100,15 @@ class SuperAdminProfilePage extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: CustomButton(
+                    label: 'Simpan Perubahan',
+                    onPressed: () {},
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
               ],
             ),
           ),

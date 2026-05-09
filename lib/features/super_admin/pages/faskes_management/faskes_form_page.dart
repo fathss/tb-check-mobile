@@ -2,21 +2,48 @@ import 'package:flutter/material.dart';
 import 'package:tbcheck_app/core/theme/app_colors.dart';
 import 'package:tbcheck_app/features/super_admin/widgets/custom_button.dart';
 
-class AddFaskesPage extends StatefulWidget {
-  const AddFaskesPage({Key? key}) : super(key: key);
+class FaskesFormPage extends StatefulWidget {
+  final String pageTitle;
+  final String actionLabel;
+  final String initialKategori;
+  final String initialNama;
+  final String initialLokasi;
+  final String initialAlamat;
+  final String initialTelepon;
+
+  const FaskesFormPage({
+    super.key,
+    this.pageTitle = 'Tambah Faskes',
+    this.actionLabel = 'Simpan Faskes',
+    this.initialKategori = 'Puskesmas',
+    this.initialNama = '',
+    this.initialLokasi = '',
+    this.initialAlamat = '',
+    this.initialTelepon = '',
+  });
 
   @override
-  State<AddFaskesPage> createState() => _AddFaskesPageState();
+  State<FaskesFormPage> createState() => _FaskesFormPageState();
 }
 
-class _AddFaskesPageState extends State<AddFaskesPage> {
-  String selectedKategori = 'Puskesmas'; // Default selection
+class _FaskesFormPageState extends State<FaskesFormPage> {
+  late String selectedKategori;
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController namaController = TextEditingController();
   final TextEditingController lokasiController = TextEditingController();
   final TextEditingController alamatLengkapController = TextEditingController();
   final TextEditingController teleponController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    selectedKategori = widget.initialKategori;
+    namaController.text = widget.initialNama;
+    lokasiController.text = widget.initialLokasi;
+    alamatLengkapController.text = widget.initialAlamat;
+    teleponController.text = widget.initialTelepon;
+  }
 
   @override
   void dispose() {
@@ -39,8 +66,8 @@ class _AddFaskesPageState extends State<AddFaskesPage> {
           color: AppColors.textPrimary,
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Tambah Faskes',
+        title: Text(
+          widget.pageTitle,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -100,7 +127,7 @@ class _AddFaskesPageState extends State<AddFaskesPage> {
                 width: double.infinity,
                 child: CustomButton(
                   width: double.infinity,
-                  label: 'Simpan Faskes',
+                  label: widget.actionLabel,
                   icon: Icons.save,
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {

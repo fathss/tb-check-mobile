@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:tbcheck_app/core/theme/app_colors.dart';
 import 'package:tbcheck_app/features/admin_faskes/dashboard/screens/admin_dashboard_screen.dart';
 import 'package:tbcheck_app/features/landing/landing_page.dart';
-import 'package:tbcheck_app/features/super_admin/pages/faskes_management/add_faskes_page.dart';
+import 'package:tbcheck_app/features/super_admin/navigation/super_admin_main_page.dart';
+import 'package:tbcheck_app/features/super_admin/pages/faskes_management/faskes_form_page.dart';
 import 'package:tbcheck_app/features/super_admin/pages/faskes_management/faskes_detail_page.dart';
 import 'package:tbcheck_app/features/super_admin/pages/faskes_management/faskes_management_page.dart';
 import 'package:tbcheck_app/features/super_admin/pages/super_admin_dashboard.dart';
@@ -41,12 +42,4 @@ class MyApp extends StatelessWidget {
 // LandingPage (landing page + splash screen + auth page)
 // CompleteProfilePage (form isi profil)
 // MainPage (home page Pasien)
-// AdminDashboardScreen (home page Admin)
-// SuperAdminDashboard
-// SuperAdminProfilePage
-// FaskesManagementPage
-// AddFaskesPage
-// FaskesDetailPage
-// AdminDetailPage
-// UserManagementPage
-// UserDetailPage
+// SuperAdminMainPage (home page super admin)

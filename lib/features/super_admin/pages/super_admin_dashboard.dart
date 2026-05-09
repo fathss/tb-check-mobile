@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tbcheck_app/core/theme/app_colors.dart';
+import 'package:tbcheck_app/features/super_admin/pages/faskes_management/faskes_management_page.dart';
+import 'package:tbcheck_app/features/super_admin/pages/user_admin_management/user_management_page.dart';
 
 class SuperAdminDashboard extends StatelessWidget {
   final int totalFaskes = 13;
@@ -86,7 +88,7 @@ class SuperAdminDashboard extends StatelessWidget {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 30),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 30),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -141,6 +143,13 @@ class SuperAdminDashboard extends StatelessWidget {
                 iconBackgroundColor: AppColors.primaryBg,
                 titleText: 'Data Faskes & Akun',
                 descriptionText: 'Kelola Faskes dan akses Adminnya',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const FaskesManagementPage(),
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 12),
               _MenuCard(
@@ -149,6 +158,13 @@ class SuperAdminDashboard extends StatelessWidget {
                 iconBackgroundColor: AppColors.warningBg,
                 titleText: 'Data User Umum',
                 descriptionText: 'Kelola akun pasien atau masyarakat',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const UserManagementPage(),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -247,6 +263,7 @@ class _MenuCard extends StatelessWidget {
   final Color iconBackgroundColor;
   final String titleText;
   final String descriptionText;
+  final VoidCallback? onTap;
 
   const _MenuCard({
     required this.icon,
@@ -254,15 +271,16 @@ class _MenuCard extends StatelessWidget {
     required this.iconBackgroundColor,
     required this.titleText,
     required this.descriptionText,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final card = Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16.0),
         border: Border.all(color: AppColors.tertiary, width: 1),
       ),
       child: Row(
@@ -305,6 +323,17 @@ class _MenuCard extends StatelessWidget {
           const SizedBox(width: 8),
           const Icon(Icons.chevron_right, color: Colors.grey),
         ],
+      ),
+    );
+
+    if (onTap == null) return card;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16.0),
+        onTap: onTap,
+        child: card,
       ),
     );
   }
