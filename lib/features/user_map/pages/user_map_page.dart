@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
@@ -5,7 +6,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:tbcheck_app/core/constants/app_constants.dart';
 import 'package:tbcheck_app/core/widgets/custom_search_field.dart';
 import 'package:tbcheck_app/features/user_map/models/faskes_model.dart';
-import 'package:tbcheck_app/features/user_map/widgets/bottom_sheet.dart';
+import 'package:tbcheck_app/features/user_map/widgets/filter_chip.dart';
+import 'package:tbcheck_app/features/user_map/widgets/faskes_list_bottom_sheet.dart';
 
 class UserMapPage extends StatefulWidget {
   const UserMapPage({super.key});
@@ -21,13 +23,20 @@ class _UserMapPageState extends State<UserMapPage> {
   Set<Polyline> _polylines = {};
   List<FaskesWithDistance> _faskesWithDistance = [];
   final TextEditingController _searchController = TextEditingController();
-  final int maxFaskesReachRadius = 10000; // in meters
+  final int maxFaskesReachRadius = 10000;
+
+  String _selectedTipe = 'Semua';
+  final List<String> _tipeOptions = ['Semua', 'Puskesmas', 'Rumah Sakit'];
 
   String googleApiKey = AppConstants.googleMapsKey;
+
+  /// Key to access FaskesListBottomSheet state
+  late GlobalKey<State<FaskesListBottomSheet>> _faskesSheetKey;
 
   @override
   void initState() {
     super.initState();
+    _faskesSheetKey = GlobalKey<State<FaskesListBottomSheet>>();
     _checkPermission();
   }
 
@@ -37,7 +46,6 @@ class _UserMapPageState extends State<UserMapPage> {
     super.dispose();
   }
 
-  // 1. Cek Izin & Ambil Lokasi Perangkat
   Future<void> _checkPermission() async {
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
@@ -47,13 +55,11 @@ class _UserMapPageState extends State<UserMapPage> {
     Position position = await Geolocator.getCurrentPosition();
     setState(() {
       _currentPosition = position;
-      _loadMarkers(); // Tampilkan faskes setelah lokasi user didapat
+      _loadMarkers();
     });
   }
 
-  // 2. Filter Faskes & Buat Marker
   void _loadMarkers() {
-    // initialize with full (no search) — reuse _applySearch
     _applySearch('');
   }
 
@@ -67,13 +73,8 @@ class _UserMapPageState extends State<UserMapPage> {
         ),
       );
     }
-
-    // Intentionally not calling `_getPolylineRoute` here to avoid
-    // automatically drawing a route when a marker or list item is tapped.
-    // The `_getPolylineRoute` function remains available for future use.
   }
 
-  // Apply search filter and rebuild markers & list
   void _applySearch(String query) {
     if (_currentPosition == null) return;
 
@@ -83,7 +84,10 @@ class _UserMapPageState extends State<UserMapPage> {
     _faskesWithDistance.clear();
 
     for (var faskes in daftarFaskesMockup) {
-      // filter by query if provided
+      // Filter by tipe
+      if (_selectedTipe != 'Semua' && faskes.tipe != _selectedTipe) continue;
+
+      // Filter by query
       if (q.isNotEmpty) {
         final name = faskes.nama.toLowerCase();
         final lokasi = faskes.lokasi.toLowerCase();
@@ -103,8 +107,13 @@ class _UserMapPageState extends State<UserMapPage> {
             markerId: MarkerId(faskes.nama),
             position: faskes.posisi,
             infoWindow: InfoWindow(title: faskes.nama),
-            onTap: () {
-              _focusOnFaskes(faskes);
+            onTap: () async {
+              // Show the detail bottom sheet for this faskes
+              final state = _faskesSheetKey.currentState;
+              if (state != null) {
+                // Call selectFaskes using dynamic dispatch
+                (state as dynamic).selectFaskes(faskes);
+              }
             },
           ),
         );
@@ -115,16 +124,20 @@ class _UserMapPageState extends State<UserMapPage> {
       }
     }
 
-    // Sort by distance
     _faskesWithDistance.sort((a, b) => a.distance.compareTo(b.distance));
 
     setState(() {});
   }
 
-  void _getPolylineRoute(LatLng destination) async {
+  void _clearPolylines() {
+    setState(() {
+      _polylines.clear();
+    });
+  }
+
+  Future<void> getPolylines(LatLng destination) async {
     PolylinePoints polylinePoints = PolylinePoints(apiKey: googleApiKey);
 
-    // Meminta data rute dari Google Directions API
     PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
       request: PolylineRequest(
         origin: PointLatLng(
@@ -132,29 +145,51 @@ class _UserMapPageState extends State<UserMapPage> {
           _currentPosition!.longitude,
         ),
         destination: PointLatLng(destination.latitude, destination.longitude),
-        mode: TravelMode.driving, // Mode berkendara
+        mode: TravelMode.driving,
       ),
     );
 
     if (result.points.isNotEmpty) {
       List<LatLng> polylineCoordinates = [];
 
-      // Mengubah hasil titik-titik dari Google menjadi LatLng Flutter
       for (var point in result.points) {
         polylineCoordinates.add(LatLng(point.latitude, point.longitude));
       }
 
       setState(() {
-        _polylines.clear(); // Bersihkan rute lama jika ada
+        _polylines.clear();
         _polylines.add(
           Polyline(
             polylineId: const PolylineId("asli_rute"),
             color: Colors.blue,
-            points: polylineCoordinates, // Titik-titik yang mengikuti jalan
+            points: polylineCoordinates,
             width: 5,
           ),
         );
       });
+
+      // Animate camera to show both markers
+      if (_mapController != null) {
+        LatLng userPos = LatLng(
+          _currentPosition!.latitude,
+          _currentPosition!.longitude,
+        );
+
+        LatLngBounds bounds = LatLngBounds(
+          southwest: LatLng(
+            math.min(userPos.latitude, destination.latitude),
+            math.min(userPos.longitude, destination.longitude),
+          ),
+          northeast: LatLng(
+            math.max(userPos.latitude, destination.latitude),
+            math.max(userPos.longitude, destination.longitude),
+          ),
+        );
+
+        await _mapController!.animateCamera(
+          CameraUpdate.newLatLngBounds(bounds, 100),
+        );
+      }
     } else {
       print("Gagal mengambil rute: ${result.errorMessage}");
     }
@@ -191,7 +226,8 @@ class _UserMapPageState extends State<UserMapPage> {
                   myLocationEnabled: true,
                   myLocationButtonEnabled: false,
                 ),
-                // Current position button (placed above bottom sheet)
+
+                // Current position button
                 Positioned(
                   right: 8.0,
                   bottom: 100.0,
@@ -220,21 +256,43 @@ class _UserMapPageState extends State<UserMapPage> {
                   ),
                 ),
 
-                // Search Bar Overlay
+                // Search Bar + Filter Chips Overlay
                 Positioned(
                   top: 40.0,
-                  left: 20.0,
-                  right: 20.0,
-                  child: CustomSearchField(
-                    controller: _searchController,
-                    hintText: 'Cari Puskesmas atau RSUD...',
-                    onChanged: (value) => _applySearch(value),
+                  left: 0,
+                  right: 0,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        child: CustomSearchField(
+                          controller: _searchController,
+                          hintText: 'Cari Puskesmas atau RSUD...',
+                          onChanged: (value) => _applySearch(value),
+                        ),
+                      ),
+                      const SizedBox(height: 10.0),
+                      UserMapFilterChips(
+                        options: _tipeOptions,
+                        selectedValue: _selectedTipe,
+                        onSelected: (tipe) {
+                          setState(() {
+                            _selectedTipe = tipe;
+                          });
+                          _applySearch(_searchController.text);
+                        },
+                      ),
+                    ],
                   ),
                 ),
 
-                UserMapBottomSheet(
+                FaskesListBottomSheet(
+                  key: _faskesSheetKey,
                   faskesWithDistance: _faskesWithDistance,
                   onFaskesTap: (faskes) => _focusOnFaskes(faskes),
+                  onRouteRequested: (faskes) => getPolylines(faskes.posisi),
+                  onClose: _clearPolylines,
                 ),
               ],
             ),

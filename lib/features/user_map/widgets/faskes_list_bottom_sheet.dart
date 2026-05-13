@@ -2,24 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:tbcheck_app/core/theme/app_colors.dart';
 import 'package:tbcheck_app/features/user_map/models/faskes_model.dart';
 import 'package:tbcheck_app/features/user_map/widgets/faskes_card.dart';
+import 'package:tbcheck_app/features/user_map/widgets/faskes_detail_bottom_sheet.dart';
 
-class UserMapBottomSheet extends StatefulWidget {
+class FaskesListBottomSheet extends StatefulWidget {
   final List<FaskesWithDistance> faskesWithDistance;
   final Future<void> Function(Faskes faskes) onFaskesTap;
+  final Future<void> Function(Faskes faskes) onRouteRequested;
+  final VoidCallback onClose;
 
-  const UserMapBottomSheet({
+  const FaskesListBottomSheet({
     super.key,
     required this.faskesWithDistance,
     required this.onFaskesTap,
+    required this.onRouteRequested,
+    required this.onClose,
   });
 
   @override
-  State<UserMapBottomSheet> createState() => _UserMapBottomSheetState();
+  State<FaskesListBottomSheet> createState() => _FaskesListBottomSheetState();
 }
 
-class _UserMapBottomSheetState extends State<UserMapBottomSheet> {
+class _FaskesListBottomSheetState extends State<FaskesListBottomSheet> {
   final DraggableScrollableController _sheetController =
       DraggableScrollableController();
+  final GlobalKey _detailSheetKey = GlobalKey();
+  Faskes? _selectedFaskes;
+  double? _selectedDistance;
+  bool _isDetailOpen = false;
+  double _detailInitialSize = 0.4;
 
   @override
   void dispose() {
@@ -34,27 +44,78 @@ class _UserMapBottomSheetState extends State<UserMapBottomSheet> {
     return '${(meters / 1000).toStringAsFixed(1)} km';
   }
 
-  Future<void> _handleItemTap(Faskes faskes) async {
+  Future<void> _handleItemTap(Faskes faskes, double distance) async {
+    setState(() {
+      _selectedFaskes = faskes;
+      _selectedDistance = distance;
+      _isDetailOpen = true;
+    });
     await widget.onFaskesTap(faskes);
+  }
 
-    try {
-      await _sheetController.animateTo(
-        0.12,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.ease,
-      );
-    } catch (_) {}
+  void _handleDetailClose() {
+    setState(() {
+      _selectedFaskes = null;
+      _selectedDistance = null;
+      _isDetailOpen = false;
+    });
+
+    widget.onClose();
+  }
+
+  /// Public method to select and show detail for a faskes
+  Future<void> selectFaskes(Faskes faskes) async {
+    // Find the distance for this faskes
+    double? distance;
+    for (var item in widget.faskesWithDistance) {
+      if (item.faskes.nama == faskes.nama) {
+        distance = item.distance;
+        break;
+      }
+    }
+
+    if (distance != null) {
+      final wasOpen = _isDetailOpen;
+      _detailInitialSize = 0.4;
+      await _handleItemTap(faskes, distance);
+
+      if (wasOpen) {
+        final state = _detailSheetKey.currentState;
+        if (state != null) {
+          (state as dynamic).handleMarkerPressed(0.4);
+        }
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isDetailOpen && _selectedFaskes != null) {
+      return FaskesDetailBottomSheet(
+        key: _detailSheetKey,
+        faskesName: _selectedFaskes!.nama,
+        address: _selectedFaskes!.lokasi,
+        distance:
+            'Berjarak ${_formatDistance(_selectedDistance!)} dari lokasimu',
+        openingHours: _selectedFaskes!.status,
+        isOpen:
+            _selectedFaskes!.status == '24 Jam' ||
+            _selectedFaskes!.status == 'Buka',
+        initialSize: _detailInitialSize,
+        onRoutePressed: () => widget.onRouteRequested(_selectedFaskes!),
+        onPhonePressed: () {},
+        onSharePressed: () {},
+        onClose: _handleDetailClose,
+      );
+    }
+
     return DraggableScrollableSheet(
       controller: _sheetController,
-      initialChildSize: 0.12,
+      initialChildSize: 0.08,
       minChildSize: 0.08,
-      maxChildSize: 0.8,
+      maxChildSize: 0.9,
       snap: true,
-      snapSizes: const [0.12, 0.8],
+      snapSizes: const [0.08, 0.8, 0.9],
       builder: (context, scrollController) {
         return Container(
           decoration: BoxDecoration(
@@ -164,7 +225,10 @@ class _UserMapBottomSheetState extends State<UserMapBottomSheet> {
                             return FaskesCard(
                               faskes: faskes,
                               distanceText: distanceText,
-                              onTap: () => _handleItemTap(faskes),
+                              onTap: () {
+                                _detailInitialSize = 0.4;
+                                _handleItemTap(faskes, faskesData.distance);
+                              },
                             );
                           },
                         ),
