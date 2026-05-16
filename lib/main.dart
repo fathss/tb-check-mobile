@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tbcheck_app/core/theme/app_colors.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:tbcheck_app/features/admin_faskes/dashboard/screens/admin_dashboard_screen.dart';
 import 'package:tbcheck_app/features/landing/landing_page.dart';
 import 'package:tbcheck_app/features/super_admin/navigation/super_admin_main_page.dart';
@@ -18,7 +19,8 @@ import 'package:tbcheck_app/features/home/home_page.dart';
 import 'package:tbcheck_app/features/landing/landing_page.dart';
 import 'package:tbcheck_app/features/home/home_page.dart';
 
-void main() {
+Future<void> main() async {
+  await dotenv.load(fileName: ".env");
   runApp(const MyApp());
 }
 
