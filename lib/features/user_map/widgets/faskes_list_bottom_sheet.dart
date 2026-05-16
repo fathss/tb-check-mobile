@@ -111,11 +111,11 @@ class _FaskesListBottomSheetState extends State<FaskesListBottomSheet> {
 
     return DraggableScrollableSheet(
       controller: _sheetController,
-      initialChildSize: 0.08,
-      minChildSize: 0.08,
+      initialChildSize: 0.1,
+      minChildSize: 0.1,
       maxChildSize: 0.9,
       snap: true,
-      snapSizes: const [0.08, 0.8, 0.9],
+      snapSizes: const [0.1, 0.8, 0.9],
       builder: (context, scrollController) {
         return Container(
           decoration: BoxDecoration(
@@ -133,48 +133,61 @@ class _FaskesListBottomSheetState extends State<FaskesListBottomSheet> {
             ],
           ),
           child: widget.faskesWithDistance.isEmpty
-              ? Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 12.0),
-                      child: Container(
-                        width: 40.0,
-                        height: 4.0,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(2.0),
-                        ),
-                      ),
+              ? SingleChildScrollView(
+                  controller: scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
+                  child: Container(
+                    constraints: BoxConstraints(
+                      minHeight: MediaQuery.of(context).size.height * 0.9,
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20.0,
-                        vertical: 12.0,
-                      ),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Faskes di Sekitarmu',
-                          style: const TextStyle(
-                            fontSize: 16.0,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12.0),
+                          child: Container(
+                            width: 40.0,
+                            height: 4.0,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(2.0),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Center(
-                        child: Text(
-                          'Tidak ada Faskes di sekitar Anda',
-                          style: TextStyle(
-                            fontSize: 14.0,
-                            color: AppColors.textSecondary,
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20.0,
+                            vertical: 12.0,
+                          ),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Faskes di Sekitarmu',
+                              style: const TextStyle(
+                                fontSize: 16.0,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 60.0,
+                          ), // Memberi jarak atas bawah tanpa merusak layout
+                          child: Text(
+                            'Tidak ada Faskes di sekitar Anda',
+                            textAlign:
+                                TextAlign.center, // Membuat teks rata tengah
+                            style: TextStyle(
+                              fontSize: 14.0,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 )
               : ListView(
                   controller: scrollController,

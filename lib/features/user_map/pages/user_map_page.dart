@@ -53,6 +53,9 @@ class _UserMapPageState extends State<UserMapPage> {
     }
 
     Position position = await Geolocator.getCurrentPosition();
+
+    if (!mounted) return;
+
     setState(() {
       _currentPosition = position;
       _loadMarkers();
