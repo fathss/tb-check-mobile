@@ -5,6 +5,8 @@ import 'package:tbcheck_app/core/theme/app_colors.dart';
 import 'package:tbcheck_app/features/admin_faskes/patient_location_history/widgets/date_field.dart';
 import 'package:tbcheck_app/features/admin_faskes/patient_location_history/widgets/patient_timeline_item.dart';
 
+import 'package:tbcheck_app/features/admin_faskes/patient_location_history/models/patient_timeline_model.dart';
+
 class UserLocationHistoryPage extends StatefulWidget {
   final String pageTitle;
 
@@ -20,6 +22,14 @@ class _UserLocationHistoryPageState extends State<UserLocationHistoryPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 1. FILTER DATA BERDASARKAN TANGGAL YANG DIPILIH
+    // Membandingkan tahun, bulan, dan hari saja (mengabaikan jam/menit jika ada)
+    final filteredTimelineData = mockPatientTimelineData.where((item) {
+      return item.tanggal.year == _selectedDate.year &&
+          item.tanggal.month == _selectedDate.month &&
+          item.tanggal.day == _selectedDate.day;
+    }).toList();
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -41,7 +51,6 @@ class _UserLocationHistoryPageState extends State<UserLocationHistoryPage> {
       ),
       body: Stack(
         children: [
-          // Date Field
           Column(
             children: [
               DateField(
@@ -53,60 +62,41 @@ class _UserLocationHistoryPageState extends State<UserLocationHistoryPage> {
                 },
               ),
               const SizedBox(height: 16),
-              // Patient Timeline
+
+              // 2. TAMPILKAN TIMELINE ATAU EMTPY STATE JIKA DATA TIDAK DITEMUKAN
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                  child: ListView(
-                    children: const [
-                      PatientTimelineItem(
-                        time: "14:45 WIB",
-                        title: "Tiba di Rumah (Domisili)",
-                        subtitle: "Jl. Raya ITS, Sukolilo, Surabaya.",
-                        isFirst:
-                            true, // Item pertama: Garis atas otomatis hilang
-                      ),
-                      PatientTimelineItem(
-                        time: "14:15 WIB",
-                        title: "Dalam Perjalanan Pulang",
-                        subtitle: "Melewati Jl. Menur Pumpungan, Surabaya.",
-                      ),
-                      PatientTimelineItem(
-                        time: "13:00 WIB",
-                        title: "Apotek Puskesmas (Ambil Obat)",
-                        subtitle:
-                            "Pengambilan obat anti-tuberculosis (OAT) bulan ke-2.",
-                      ),
-                      PatientTimelineItem(
-                        time: "12:30 WIB",
-                        title: "Meninggalkan Ruang Konsultasi Dokter",
-                        subtitle: "Puskesmas Sukolilo, Surabaya.",
-                      ),
-                      PatientTimelineItem(
-                        time: "10:00 WIB",
-                        title: "Pemeriksaan Laboratorium",
-                        subtitle: "Pengambilan sampel dahak selesai dilakukan.",
-                      ),
-                      PatientTimelineItem(
-                        time: "09:30 WIB",
-                        title: "Konsultasi Poli Paru",
-                        subtitle: "Pemeriksaan fisik oleh dr. Spesialis Paru.",
-                      ),
-                      PatientTimelineItem(
-                        time: "09:15 WIB",
-                        title: "Check-in Lokasi Faskes",
-                        subtitle: "Puskesmas Sukolilo, Surabaya.",
-                      ),
-                      PatientTimelineItem(
-                        time: "08:45 WIB",
-                        title: "Meninggalkan Rumah (Domisili)",
-                        subtitle:
-                            "Perjalanan menuju faskes menggunakan kendaraan roda dua.",
-                        isLast:
-                            true, // Item terakhir: Garis bawah otomatis hilang
-                      ),
-                    ],
-                  ),
+                  child: filteredTimelineData.isEmpty
+                      ? const Center(
+                          child: Text(
+                            "Tidak ada riwayat lokasi pada tanggal ini.",
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 14,
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          // Menggunakan data hasil filter
+                          itemCount: filteredTimelineData.length,
+                          itemBuilder: (context, index) {
+                            final item = filteredTimelineData[index];
+
+                            // Penentuan item pertama dan terakhir disesuaikan dengan list yang sudah difilter
+                            final bool isFirst = index == 0;
+                            final bool isLast =
+                                index == filteredTimelineData.length - 1;
+
+                            return PatientTimelineItem(
+                              time: "${item.waktu} WIB",
+                              title: item.lokasi,
+                              subtitle: "${item.lat}, ${item.lng}",
+                              isFirst: isFirst,
+                              isLast: isLast,
+                            );
+                          },
+                        ),
                 ),
               ),
             ],
