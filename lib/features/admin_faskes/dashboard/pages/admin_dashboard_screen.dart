@@ -1,88 +1,339 @@
 import 'package:flutter/material.dart';
-import '../widgets/stat_card_widget.dart';
-import '../widgets/action_button_widget.dart';
-import '../widgets/alert_card_widget.dart';
+import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
+import '../providers/dashboard_provider.dart';
+import '../../patients/pages/patient_form_page.dart'; 
+import '../../patients/providers/patient_provider.dart'; 
 
-class AdminDashboardScreen extends StatelessWidget {
+class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({Key? key}) : super(key: key);
 
   @override
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<DashboardProvider>().fetchDashboardData();
+      context.read<PatientProvider>().fetchPatients(); 
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Pantau status loading dari kedua provider sekaligus
+    final dashboardProvider = context.watch<DashboardProvider>();
+    final patientProvider = context.watch<PatientProvider>();
+    
+    // Halaman dianggap "Loading" jika salah satu dari mereka masih memproses data
+    final bool isLoading = dashboardProvider.isLoading || patientProvider.isLoading;
+    final bool hasError = dashboardProvider.errorMessage != null;
+
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: const Color(0xFFF8F9FA), 
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Colors.blue.shade50,
+                color: const Color(0xFFE9F0FF),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.radar, color: Colors.blue),
+              child: const Icon(Icons.radar, color: Color(0xFF1060EF), size: 24),
             ),
             const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Tim Surveilans', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
-                const Text('PKM Perak Timur', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+                Text('Tim Surveilans', style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+                const Text('PKM Perak Timur', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
               ],
             ),
           ],
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          context.read<DashboardProvider>().fetchDashboardData();
+          context.read<PatientProvider>().fetchPatients();
+        },
+        // ANIMATED SWITCHER: Memberikan efek transisi Fade yang sangat smooth
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 600), // Durasi transisi fade
+          switchInCurve: Curves.easeIn,
+          switchOutCurve: Curves.easeOut,
+          child: isLoading 
+              ? _buildFullPageShimmer(key: const ValueKey('shimmer')) 
+              : _buildMainContent(context, dashboardProvider, patientProvider, hasError, key: const ValueKey('content')),
+        ),
+      ),
+    );
+  }
+
+  // ==========================================
+  // KONTEN UTAMA (TAMPIL SETELAH LOADING SELESAI)
+  // ==========================================
+  Widget _buildMainContent(BuildContext context, DashboardProvider dashProvider, PatientProvider patProvider, bool hasError, {Key? key}) {
+    if (hasError) {
+      return SingleChildScrollView(
+        key: key,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(16)),
+          child: Text('Gagal terhubung: ${dashProvider.errorMessage}', style: const TextStyle(color: Colors.red)),
+        ),
+      );
+    }
+
+    final total = dashProvider.data?.totalCases ?? 0;
+    final aktif = dashProvider.data?.activePatients ?? 0;
+    final sembuh = dashProvider.data?.recoveredPatients ?? 0;
+
+    return SingleChildScrollView(
+      key: key,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // --- KOTAK TOTAL KASUS ---
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1060EF),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(color: const Color(0xFF1060EF).withOpacity(0.25), blurRadius: 15, offset: const Offset(0, 8)),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Total Kasus TBC Terdata', style: TextStyle(color: Colors.white70, fontSize: 14, fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                Text('$total Pasien', style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // --- KOTAK PASIEN AKTIF & SEMBUH ---
+          Row(
+            children: [
+              Expanded(child: _buildStatCard('Pasien Aktif', '$aktif', Colors.orange)),
+              const SizedBox(width: 16),
+              Expanded(child: _buildStatCard('Pasien Sembuh', '$sembuh', Colors.green)),
+            ],
+          ),
+
+          const SizedBox(height: 32),
+          const Text('Aksi Cepat', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          
+          // --- TOMBOL AKSI CEPAT ---
+          Row(
+            children: [
+              Expanded(
+                child: _buildActionCard(
+                  icon: Icons.person_add_alt_1_rounded,
+                  label: 'Data Pasien',
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const PatientFormPage()));
+                  },
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildActionCard(
+                  icon: Icons.map_rounded,
+                  label: 'Peta Sebaran',
+                  onTap: () {}, 
+                ),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 32),
+          const Text('Perlu Tindakan Khusus', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          
+          // --- KOTAK PERINGATAN KONDISIONAL ---
+          _buildAlertBox(patProvider),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAlertBox(PatientProvider patientProvider) {
+    final dropOutPatients = patientProvider.patients.where((p) => p.status.toLowerCase().contains('drop')).toList();
+
+    if (dropOutPatients.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.green.shade50,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.green.shade100),
+        ),
+        child: Row(
           children: [
             Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Colors.blueAccent, Colors.blue]),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [BoxShadow(color: Colors.blue.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 5))],
-              ),
-              child: const Column(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+              child: Icon(Icons.check_circle_rounded, color: Colors.green.shade700),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Total Kasus TBC Terdata', style: TextStyle(color: Colors.white70, fontSize: 14)),
-                  SizedBox(height: 8),
-                  Text('145 Pasien', style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
+                  Text('Semua Pasien Aman', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade900, fontSize: 14)),
+                  const SizedBox(height: 4),
+                  Text('Seluruh pasien faskes patuh meminum obat.', style: TextStyle(color: Colors.green.shade700, fontSize: 12)),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-            const Row(
+          ],
+        ),
+      );
+    }
+
+    final badPatient = dropOutPatients.first;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.red.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.red.shade100),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+            child: const Icon(Icons.warning_rounded, color: Colors.red),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: StatCardWidget(title: 'Pasien Aktif', value: '45', color: Colors.orange)),
-                SizedBox(width: 16),
-                Expanded(child: StatCardWidget(title: 'Pasien Sembuh', value: '100', color: Colors.green)),
+                Text('${badPatient.fullName} (${badPatient.status})', 
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 14)),
+                const SizedBox(height: 4),
+                Text('Tidak hadir kunjungan wajib faskes.', style: TextStyle(color: Colors.red.shade700, fontSize: 12)),
               ],
             ),
-            const SizedBox(height: 24),
-            const Text('Aksi Cepat', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            onPressed: () {},
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.red,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              side: BorderSide(color: Colors.red.shade200),
+            ),
+            child: const Text('Lacak', style: TextStyle(fontWeight: FontWeight.bold)),
+          )
+        ],
+      ),
+    );
+  }
+
+  // ==========================================
+  // WIDGET HELPER BENTUK KARTU
+  // ==========================================
+  Widget _buildStatCard(String title, String value, Color valueColor) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey.shade200)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(value, style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: valueColor)),
+          const SizedBox(height: 4),
+          Text(title, style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionCard({required IconData icon, required String label, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey.shade200)),
+        child: Column(
+          children: [
+            Icon(icon, size: 32, color: const Color(0xFF1060EF)),
             const SizedBox(height: 12),
+            Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ==========================================
+  // EFEK LOADING SKELETON (FULL PAGE SHIMMER)
+  // ==========================================
+  Widget _buildFullPageShimmer({Key? key}) {
+    return SingleChildScrollView(
+      key: key,
+      physics: const NeverScrollableScrollPhysics(), // Jangan bisa di-scroll saat loading
+      padding: const EdgeInsets.all(24),
+      child: Shimmer.fromColors(
+        baseColor: Colors.grey.shade300,
+        highlightColor: Colors.grey.shade100,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Kerangka Total Kasus
+            Container(width: double.infinity, height: 130, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20))),
+            const SizedBox(height: 16),
+            
+            // Kerangka Pasien Aktif & Sembuh
             Row(
               children: [
-                Expanded(child: ActionButtonWidget(icon: Icons.person_add, label: 'Data Pasien', onTap: () {})),
+                Expanded(child: Container(height: 95, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)))),
                 const SizedBox(width: 16),
-                Expanded(child: ActionButtonWidget(icon: Icons.map, label: 'Peta Sebaran', onTap: () {})),
+                Expanded(child: Container(height: 95, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)))),
               ],
             ),
-            const SizedBox(height: 24),
-            const Text('Perlu Tindakan Khusus', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            AlertCardWidget(
-              patientName: 'Supriyadi',
-              message: 'Tidak hadir kunjungan wajib > 2 minggu.',
-              onTrack: () {
-              },
+            
+            const SizedBox(height: 32),
+            Container(width: 120, height: 20, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))), // Teks Aksi Cepat
+            const SizedBox(height: 16),
+            
+            // Kerangka Tombol Aksi Cepat
+            Row(
+              children: [
+                Expanded(child: Container(height: 110, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)))),
+                const SizedBox(width: 16),
+                Expanded(child: Container(height: 110, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)))),
+              ],
             ),
+
+            const SizedBox(height: 32),
+            Container(width: 180, height: 20, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))), // Teks Perlu Tindakan
+            const SizedBox(height: 16),
+
+            // Kerangka Alert Box
+            Container(width: double.infinity, height: 85, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))),
           ],
         ),
       ),
