@@ -5,4 +5,10 @@ class AppConstants {
     'GOOGLE_MAPS_API_KEY',
     fallback: 'Key Not Found',
   );
+
+  // Gunakan IP yang terbukti jalan dari PatientProvider
+  static const String baseUrl = 'http://10.223.197.149:5134/api';
+  
+  // ID Faskes dummy untuk testing (nanti kita ganti dinamis saat fitur Login selesai)
+  static const String defaultFaskesId = '65a0f259-fe09-4dd6-b241-461fa5423991';
 }

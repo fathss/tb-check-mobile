@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/patient_provider.dart';
 import 'patient_form_page.dart';
+import 'patient_detail_page.dart';
 
 class PatientListPage extends StatefulWidget {
   const PatientListPage({Key? key}) : super(key: key);
@@ -118,7 +119,11 @@ class _PatientListPageState extends State<PatientListPage> {
       child: ChoiceChip(
         label: Text(label, style: TextStyle(color: isActive ? Colors.white : Colors.blue.shade700, fontSize: 12, fontWeight: FontWeight.w600)),
         selected: isActive,
-        onSelected: (val) => setState(() => selectedFilter = label),
+        onSelected: (val) {
+          setState(() => selectedFilter = label);
+          // Panggil API ulang dengan filter status yang baru diklik
+          context.read<PatientProvider>().fetchPatients(filterStatus: label);
+        },
         selectedColor: const Color(0xFF1060EF),
         backgroundColor: Colors.white,
         shape: StadiumBorder(side: BorderSide(color: isActive ? Colors.transparent : Colors.blue.shade100)),
@@ -142,63 +147,76 @@ class _PatientListPageState extends State<PatientListPage> {
       statusColor = Colors.grey;
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Avatar dengan Inisial
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: const Color(0xFFF1F4F8),
-                child: Text(patient.fullName[0].toUpperCase(), 
-                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(width: 12),
-              // Nama dan ID
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(patient.fullName, 
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    const SizedBox(height: 2),
-                    Text('ID: #PT-${patient.nik.substring(patient.nik.length - 4)}', 
-                      style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
-                  ],
-                ),
-              ),
-              // Badge Status (Kanan Atas)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: statusColor.withOpacity(0.2)),
-                ),
-                child: Text(statusText, 
-                  style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold)),
-              ),
-            ],
+    // --- BAGIAN YANG DIRUBAH (DITAMBAH INKWELL) ---
+    return InkWell(
+      onTap: () {
+        // Navigasi ke halaman detail saat Card diklik
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PatientDetailPage(patient: patient),
           ),
-          const SizedBox(height: 12),
-          Divider(color: Colors.grey.shade100, height: 1),
-          const SizedBox(height: 12),
-          // Footer Tanggal
-          Text(
-            'Terdiagnosis: ${DateFormat('d MMM yyyy', 'id_ID').format(patient.diagnosisDate)}',
-            style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
-          ),
-        ],
+        );
+      },
+      borderRadius: BorderRadius.circular(16), // Agar efek klik melengkung mengikuti kotak
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Avatar dengan Inisial
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: const Color(0xFFF1F4F8),
+                  child: Text(patient.fullName[0].toUpperCase(), 
+                    style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(width: 12),
+                // Nama dan ID
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(patient.fullName, 
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      const SizedBox(height: 2),
+                      Text('ID: #PT-${patient.nik.substring(patient.nik.length - 4)}', 
+                        style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+                    ],
+                  ),
+                ),
+                // Badge Status (Kanan Atas)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: statusColor.withOpacity(0.2)),
+                  ),
+                  child: Text(statusText, 
+                    style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Divider(color: Colors.grey.shade100, height: 1),
+            const SizedBox(height: 12),
+            // Footer Tanggal
+            Text(
+              'Terdiagnosis: ${DateFormat('d MMM yyyy', 'id_ID').format(patient.diagnosisDate)}',
+              style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+            ),
+          ],
+        ),
       ),
     );
   }
