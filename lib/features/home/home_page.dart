@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:tbcheck_app/features/medicine/medicine_card.dart';
+import 'package:tbcheck_app/core/theme/app_colors.dart';
+// import 'package:tbcheck_app/features/medicine/pages/medicine_page.dart';
+import 'package:tbcheck_app/features/medicine/widgets/medicine_schedule_card.dart';
+import 'package:tbcheck_app/features/medicine/pages/schedule_page.dart';
+import 'package:tbcheck_app/core/widgets/primary_button.dart';
+// import 'package:tbcheck_app/core/widgets/app_snackbar.dart';
+// import 'package:tbcheck_app/features/medicine/pages/schedule_page.dart';
+import 'package:tbcheck_app/features/home/widgets/treatment_progress_card.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -7,46 +14,74 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: AppColors.third,
+
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 10),
 
-              // 🔹 HEADER
+            children: [
+              const SizedBox(height: 16),
+
+              /// HEADER
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
                 children: [
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundColor: Colors.blue.withOpacity(0.1),
-                        child: const Text(
-                          "A",
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue,
+                      /// PROFILE
+                      Container(
+                        width: 58,
+                        height: 58,
+
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryBg,
+
+                          shape: BoxShape.circle,
+                        ),
+
+                        child: const Center(
+                          child: Text(
+                            "A",
+
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+
+                              color: AppColors.primary,
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+
+                      const SizedBox(width: 14),
+
+                      /// TEXT
                       const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+
                         children: [
                           Text(
                             "Halo, Aan",
-                            style: TextStyle(color: Colors.grey),
+
+                            style: TextStyle(
+                              fontSize: 13,
+
+                              color: AppColors.textSecondary,
+                            ),
                           ),
+
                           SizedBox(height: 4),
+
                           Text(
                             "Waktunya Pulih",
+
                             style: TextStyle(
-                              fontSize: 20,
+                              fontSize: 22,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -54,106 +89,128 @@ class HomePage extends StatelessWidget {
                       ),
                     ],
                   ),
-                  CircleAvatar(
-                    backgroundColor: Colors.grey.shade200,
-                    child: const Icon(Icons.notifications),
+
+                  /// NOTIFICATION
+                  Container(
+                    width: 52,
+                    height: 52,
+
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+
+                    child: const Icon(Icons.notifications_none, size: 28),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 28),
+
+              TreatmentProgressCard(
+                phase: "Fase Intensif",
+
+                description:
+                    "Kamu telah menyelesaikan 55% dari total pengobatan. Terus semangat!",
+
+                currentDose: 45,
+
+                totalDose: 180,
+
+                progress: 0.55,
+              ),
+              const SizedBox(height: 32),
+
+              /// SCHEDULE HEADER
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+                children: [
+                  const Text(
+                    "Jadwal Hari Ini",
+
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+
+                        MaterialPageRoute(builder: (_) => const SchedulePage()),
+                      );
+                    },
+
+                    child: const Text(
+                      "Lihat Kalender",
+
+                      style: TextStyle(
+                        color: AppColors.primary,
+
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
 
               const SizedBox(height: 20),
 
-              // 🔵 CARD PROGRESS
+              /// SCHEDULE LIST
+              const MedicineScheduleCard(
+                time: "06:00",
+
+                medicineName: "Rifampisin, 450 mg",
+
+                description: "1 Tablet - sebelum makan",
+
+                initialDone: true,
+              ),
+
               Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(16),
+
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF1E5BD8), Color(0xFF3B82F6)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
+                  color: Colors.white,
+
+                  borderRadius: BorderRadius.circular(24),
+
+                  border: Border.all(color: AppColors.cardStroke, width: 2),
                 ),
+
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        "Fase Intensif",
-                        style: TextStyle(color: Colors.white),
-                      ),
+                    MedicineScheduleCard(
+                      time: "19:00",
+
+                      medicineName: "Vitamin B6",
+
+                      description: "1 Tablet, Sesudah Makan",
+
+                      initialDone: false,
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
-                    const Text(
-                      "Kamu telah menyelesaikan 55% dari total pengobatan. Terus semangat!",
-                      style: TextStyle(color: Colors.white, fontSize: 14),
-                    ),
+                    PrimaryButton(
+                      text: "Konfirmasi Minum",
 
-                    const SizedBox(height: 16),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
 
-                    const Text(
-                      "45 / 180 Dosis",
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    // progress bar
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: LinearProgressIndicator(
-                        value: 0.55,
-                        minHeight: 8,
-                        backgroundColor: Colors.white.withOpacity(0.3),
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          Colors.white,
-                        ),
-                      ),
+                          MaterialPageRoute(
+                            builder: (_) => const SchedulePage(),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 24),
-
-              const Text(
-                "Jadwal Hari ini",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-
-              const SizedBox(height: 12),
-
-              // 🔹 LIST JADWAL
-              Expanded(
-                child: ListView(
-                  children: const [
-                    MedicineCard(
-                      time: "06:00 AM",
-                      title: "Rifampisin & Isoniazid",
-                      subtitle: "1 Tablet, Sebelum Makan",
-                      isDone: true,
-                    ),
-                    MedicineCard(
-                      time: "19:00 PM",
-                      title: "Vitamin B6",
-                      subtitle: "1 Tablet, Sesudah Makan",
-                      isDone: false,
-                    ),
-                  ],
-                ),
-              ),
+              const SizedBox(height: 14),
             ],
           ),
         ),
