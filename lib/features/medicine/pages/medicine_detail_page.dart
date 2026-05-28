@@ -14,7 +14,6 @@ class MedicineDetailPage extends StatefulWidget {
   final String dose;
   final String condition;
   final List<bool> activeDays;
-  final String stock;
 
   const MedicineDetailPage({
     super.key,
@@ -24,7 +23,6 @@ class MedicineDetailPage extends StatefulWidget {
     required this.dose,
     required this.condition,
     required this.activeDays,
-    required this.stock,
   });
 
   @override
@@ -45,7 +43,6 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
       dose: widget.dose,
       condition: widget.condition,
       days: widget.activeDays,
-      stock: widget.stock,
     );
   }
 
@@ -95,7 +92,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                         const SizedBox(width: 5),
 
                         const Text(
-                          "Informasi",
+                          "Information",
 
                           style: TextStyle(
                             fontSize: 20,
@@ -129,7 +126,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
 
                     /// MEDICINE NAME
                     MedicineInputSection(
-                      title: "Nama Obat",
+                      title: "Medicine Name",
                       controller: controller.medicineNameController,
                       isBold: true,
                     ),
@@ -138,13 +135,6 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                     MedicineInputSection(
                       title: "Fungsi",
                       controller: controller.functionController,
-                      isBold: true,
-                    ),
-
-                    /// STOCK OBAT
-                    MedicineInputSection(
-                      title: "Stok Obat",
-                      controller: controller.stockController,
                       isBold: true,
                     ),
 
@@ -303,70 +293,11 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                     ),
 
                     /// KONDISI
-                    Text(
-                      "Kondisi",
-
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    MedicineInputSection(
+                      title: "Kondisi",
+                      controller: controller.conditionController,
+                      isBold: true,
                     ),
-
-                    const SizedBox(height: 10),
-
-                    DropdownButtonFormField<String>(
-                      value: controller.selectedCondition,
-
-                      items: const [
-                        DropdownMenuItem(
-                          value: "Sebelum Makan",
-                          child: Text("Sebelum Makan"),
-                        ),
-
-                        DropdownMenuItem(
-                          value: "Sesudah Makan",
-                          child: Text("Sesudah Makan"),
-                        ),
-                      ],
-
-                      onChanged: (value) {
-                        setState(() {
-                          controller.changeCondition(value!);
-                        });
-                      },
-
-                      decoration: InputDecoration(
-                        filled: true,
-
-                        fillColor: Colors.white,
-
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 18,
-                        ),
-
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(18),
-
-                          borderSide: BorderSide(color: AppColors.secondary),
-                        ),
-
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(18),
-
-                          borderSide: BorderSide(color: AppColors.secondary),
-                        ),
-
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(18),
-
-                          borderSide: BorderSide(color: AppColors.primary),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
 
                     /// HARI
                     MedicineDaySelector(

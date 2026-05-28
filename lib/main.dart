@@ -49,7 +49,7 @@ class MyApp extends StatelessWidget {
         fontFamily: "PlusJakartaSans",
         colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
       ),
-      home: const AdminMainNavigation(),
+      home: const MainPage(),
     );
   }
 }
