@@ -108,10 +108,45 @@ class PatientDetailPage extends StatelessWidget {
               title: 'No. Telepon Aktif',
               value: '0812-3456-7890', 
             ),
-            _buildInfoCard(
-              icon: Icons.location_on_rounded,
-              title: 'Alamat Domisili',
-              value: patient.address ?? 'Alamat tidak tersedia',
+            Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE9F0FF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.location_on_rounded, color: Color(0xFF1060EF), size: 24),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Alamat Domisili & Titik Peta', style: TextStyle(color: Colors.grey.shade400, fontSize: 12, fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 2),
+                        Text(patient.address ?? 'Alamat tidak tersedia', style: const TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 4),
+                        // Menampilkan koordinat GPS
+                        Text(
+                          (patient.latitude != null && patient.longitude != null) 
+                            ? 'Lat: ${patient.latitude!.toStringAsFixed(4)} | Lng: ${patient.longitude!.toStringAsFixed(4)}'
+                            : 'Koordinat belum disinkronkan',
+                          style: const TextStyle(color: Color(0xFF1060EF), fontSize: 11, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
 
             const SizedBox(height: 32),

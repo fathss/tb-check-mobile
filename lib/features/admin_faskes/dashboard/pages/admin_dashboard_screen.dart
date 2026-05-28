@@ -24,11 +24,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Pantau status loading dari kedua provider sekaligus
     final dashboardProvider = context.watch<DashboardProvider>();
     final patientProvider = context.watch<PatientProvider>();
     
-    // Halaman dianggap "Loading" jika salah satu dari mereka masih memproses data
     final bool isLoading = dashboardProvider.isLoading || patientProvider.isLoading;
     final bool hasError = dashboardProvider.errorMessage != null;
 
@@ -63,9 +61,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           context.read<DashboardProvider>().fetchDashboardData();
           context.read<PatientProvider>().fetchPatients();
         },
-        // ANIMATED SWITCHER: Memberikan efek transisi Fade yang sangat smooth
         child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 600), // Durasi transisi fade
+          duration: const Duration(milliseconds: 600), 
           switchInCurve: Curves.easeIn,
           switchOutCurve: Curves.easeOut,
           child: isLoading 
@@ -77,7 +74,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // ==========================================
-  // KONTEN UTAMA (TAMPIL SETELAH LOADING SELESAI)
+  // KONTEN UTAMA
   // ==========================================
   Widget _buildMainContent(BuildContext context, DashboardProvider dashProvider, PatientProvider patProvider, bool hasError, {Key? key}) {
     if (hasError) {
@@ -140,27 +137,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           const Text('Aksi Cepat', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           
-          // --- TOMBOL AKSI CEPAT ---
-          Row(
-            children: [
-              Expanded(
-                child: _buildActionCard(
-                  icon: Icons.person_add_alt_1_rounded,
-                  label: 'Data Pasien',
-                  onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => const PatientFormPage()));
-                  },
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildActionCard(
-                  icon: Icons.map_rounded,
-                  label: 'Peta Sebaran',
-                  onTap: () {}, 
-                ),
-              ),
-            ],
+          // --- TOMBOL AKSI CEPAT (Kini menjadi satu tombol lebar yang elegan) ---
+          _buildWideActionCard(
+            icon: Icons.person_add_alt_1_rounded,
+            label: 'Tambah Pasien Baru',
+            subLabel: 'Daftarkan data dan lokasi awal pasien',
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const PatientFormPage()));
+            },
           ),
           
           const SizedBox(height: 32),
@@ -270,18 +254,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildActionCard({required IconData icon, required String label, required VoidCallback onTap}) {
+  // KARTU AKSI LEBAR (Pengganti dua kotak sebelumnya)
+  Widget _buildWideActionCard({required IconData icon, required String label, required String subLabel, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 24),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey.shade200)),
-        child: Column(
+        child: Row(
           children: [
-            Icon(icon, size: 32, color: const Color(0xFF1060EF)),
-            const SizedBox(height: 12),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: const Color(0xFFE9F0FF), borderRadius: BorderRadius.circular(12)),
+              child: Icon(icon, size: 28, color: const Color(0xFF1060EF)),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Text(subLabel, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.grey),
           ],
         ),
       ),
@@ -294,7 +293,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildFullPageShimmer({Key? key}) {
     return SingleChildScrollView(
       key: key,
-      physics: const NeverScrollableScrollPhysics(), // Jangan bisa di-scroll saat loading
+      physics: const NeverScrollableScrollPhysics(), 
       padding: const EdgeInsets.all(24),
       child: Shimmer.fromColors(
         baseColor: Colors.grey.shade300,
@@ -316,20 +315,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             
             const SizedBox(height: 32),
-            Container(width: 120, height: 20, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))), // Teks Aksi Cepat
+            Container(width: 120, height: 20, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))), 
             const SizedBox(height: 16),
             
-            // Kerangka Tombol Aksi Cepat
-            Row(
-              children: [
-                Expanded(child: Container(height: 110, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)))),
-                const SizedBox(width: 16),
-                Expanded(child: Container(height: 110, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)))),
-              ],
-            ),
+            // Kerangka Tombol Aksi Cepat (Sekarang menyesuaikan layout lebar)
+            Container(width: double.infinity, height: 90, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20))),
 
             const SizedBox(height: 32),
-            Container(width: 180, height: 20, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))), // Teks Perlu Tindakan
+            Container(width: 180, height: 20, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))), 
             const SizedBox(height: 16),
 
             // Kerangka Alert Box

@@ -55,6 +55,13 @@ class _PatientListPageState extends State<PatientListPage> {
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: TextField(
+              onChanged: (value) {
+                // Langsung tembak API setiap kali user mengetik
+                context.read<PatientProvider>().fetchPatients(
+                  filterStatus: selectedFilter, // Tetap pertahankan filter yang sedang aktif
+                  searchQuery: value,
+                );
+              },
               decoration: InputDecoration(
                 hintText: 'Cari nama pasien di wilayah ini...',
                 hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
