@@ -9,6 +9,7 @@ import 'package:tbcheck_app/core/navigation/main_page.dart';
 
 // --- Features ---
 import 'package:tbcheck_app/features/admin_faskes/patients/providers/patient_provider.dart';
+import 'package:tbcheck_app/features/admin_faskes/dashboard/providers/dashboard_provider.dart';
 import 'package:tbcheck_app/features/admin_faskes/dashboard/providers/dashboard_provider.dart'; 
 import 'package:tbcheck_app/features/admin_faskes/navigation/admin_main_navigation.dart';
 // IMPORT PROVIDER BARU:
@@ -49,7 +50,7 @@ class MyApp extends StatelessWidget {
         fontFamily: "PlusJakartaSans",
         colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
       ),
-      home: const AdminMainNavigation(),
+      home: const MainPage(),
     );
   }
 }
