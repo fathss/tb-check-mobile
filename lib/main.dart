@@ -32,9 +32,7 @@ Future<void> main() async {
 
   runApp(
     MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => PatientProvider()),
-      ],
+      providers: [ChangeNotifierProvider(create: (_) => PatientProvider())],
       child: const MyApp(),
     ),
   );
@@ -52,7 +50,7 @@ class MyApp extends StatelessWidget {
         fontFamily: "PlusJakartaSans",
         colorScheme: .fromSeed(seedColor: AppColors.primary),
       ),
-      home: const AdminMainNavigation(),
+      home: const MainPage(),
     );
   }
 }

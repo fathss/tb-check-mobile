@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tbcheck_app/features/medicine/pages/medicine_page.dart';
 import 'package:tbcheck_app/features/user_map/pages/user_map_page.dart';
 import '../../../features/home/home_page.dart';
 //import '../features/medicine/medicine_page.dart';
@@ -15,7 +16,7 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   int currentIndex = 0;
 
-  final pages = [HomePage(), UserMapPage(), Container(), Container()];
+  final pages = [HomePage(), UserMapPage(), MedicinePage(), Container()];
 
   @override
   Widget build(BuildContext context) {
