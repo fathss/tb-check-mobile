@@ -13,6 +13,10 @@ class MedicineDetailController {
 
   List<bool> activeDays = [];
 
+  late TextEditingController stockController;
+
+  int selectedImageIndex = 0;
+
   void init({
     required String medicineName,
     required String function,
@@ -20,6 +24,8 @@ class MedicineDetailController {
     required String condition,
     required List<bool> days,
     required List<String> consumeTimes,
+    required String stock,
+    int imageIndex = 0,
   }) {
     medicineNameController = TextEditingController(text: medicineName);
 
@@ -34,6 +40,10 @@ class MedicineDetailController {
     selectedCondition = condition;
 
     activeDays = List.from(days);
+
+    stockController = TextEditingController(text: stock);
+
+    selectedImageIndex = imageIndex;
   }
 
   void dispose() {
@@ -46,6 +56,7 @@ class MedicineDetailController {
     }
 
     doseController.dispose();
+    stockController.dispose();
   }
 
   void toggleDay(int index) {
@@ -64,5 +75,9 @@ class MedicineDetailController {
 
   void changeCondition(String value) {
     selectedCondition = value;
+  }
+
+  void changeImage(int index) {
+    selectedImageIndex = index;
   }
 }

@@ -14,6 +14,7 @@ class MedicineDetailPage extends StatefulWidget {
   final String dose;
   final String condition;
   final List<bool> activeDays;
+  final String stock;
 
   const MedicineDetailPage({
     super.key,
@@ -23,6 +24,7 @@ class MedicineDetailPage extends StatefulWidget {
     required this.dose,
     required this.condition,
     required this.activeDays,
+    required this.stock,
   });
 
   @override
@@ -43,6 +45,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
       dose: widget.dose,
       condition: widget.condition,
       days: widget.activeDays,
+      stock: widget.stock,
     );
   }
 
@@ -135,6 +138,13 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                     MedicineInputSection(
                       title: "Fungsi",
                       controller: controller.functionController,
+                      isBold: true,
+                    ),
+
+                    /// STOCK OBAT
+                    MedicineInputSection(
+                      title: "Stok Obat",
+                      controller: controller.stockController,
                       isBold: true,
                     ),
 

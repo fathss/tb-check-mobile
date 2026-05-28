@@ -5,6 +5,7 @@ import '../pages/schedule_page.dart';
 import '../widgets/medicine_schedule_card.dart';
 import '../widgets/medicine_item_card.dart';
 import 'package:tbcheck_app/features/medicine/pages/medicine_detail_page.dart';
+import '../pages/medicine_list_page.dart';
 
 class MedicinePage extends StatelessWidget {
   const MedicinePage({super.key});
@@ -84,20 +85,34 @@ class MedicinePage extends StatelessWidget {
 
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
-                    Text(
+
+                  children: [
+                    const Text(
                       "Daftar Obat Anda",
+
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
 
-                    Text(
-                      "Lihat Semua",
-                      style: TextStyle(
-                        color: Color(0xFF2563EB),
-                        fontWeight: FontWeight.bold,
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const MedicineListPage(),
+                          ),
+                        );
+                      },
+
+                      child: const Text(
+                        "Lihat Semua",
+
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],
@@ -119,6 +134,7 @@ class MedicinePage extends StatelessWidget {
                           function: "Untuk pengobatan TBC",
                           consumeTimes: ["07:00 AM"],
                           dose: "3 pill, once per day",
+                          stock: "30",
                           condition: "Sebelum Makan",
                           activeDays: const [
                             true,
@@ -149,6 +165,7 @@ class MedicinePage extends StatelessWidget {
                           function: "Untuk pengobatan TBC",
                           consumeTimes: ["07:00 AM"],
                           dose: "3 pill, once per day",
+                          stock: "30",
                           condition: "Sesudah Makan",
                           activeDays: const [
                             true,
