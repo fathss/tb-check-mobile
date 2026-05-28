@@ -10,6 +10,7 @@ import 'package:tbcheck_app/core/navigation/main_page.dart';
 // --- Features ---
 import 'package:tbcheck_app/features/admin_faskes/patients/providers/patient_provider.dart';
 import 'package:tbcheck_app/features/admin_faskes/dashboard/providers/dashboard_provider.dart';
+import 'package:tbcheck_app/features/admin_faskes/dashboard/providers/dashboard_provider.dart'; 
 import 'package:tbcheck_app/features/admin_faskes/navigation/admin_main_navigation.dart';
 // IMPORT PROVIDER BARU:
 import 'package:tbcheck_app/features/admin_faskes/profile/providers/faskes_profile_provider.dart';
@@ -19,7 +20,7 @@ Future<void> main() async {
   await dotenv.load(fileName: ".env");
 
   WidgetsFlutterBinding.ensureInitialized();
-
+  
   // 2. Setup Localization
   await initializeDateFormatting('id_ID', null);
 
@@ -28,7 +29,7 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => PatientProvider()),
-        ChangeNotifierProvider(create: (_) => DashboardProvider()),
+        ChangeNotifierProvider(create: (_) => DashboardProvider()), 
         // DAFTARKAN PROVIDER BARU:
         ChangeNotifierProvider(create: (_) => FaskesProfileProvider()),
       ],
