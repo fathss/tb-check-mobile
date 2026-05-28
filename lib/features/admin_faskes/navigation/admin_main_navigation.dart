@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../dashboard/pages/admin_dashboard_screen.dart';
-// 1. TAMBAHKAN IMPORT INI
 import '../patients/pages/patient_list_page.dart'; 
+// 1. TAMBAHKAN IMPORT MAP DISINI
+import '../map_tracking/pages/admin_map_page.dart'; 
 import '../profile/screens/admin_profile_screen.dart';
 
 class AdminMainNavigation extends StatefulWidget {
@@ -14,17 +15,11 @@ class AdminMainNavigation extends StatefulWidget {
 class _AdminMainNavigationState extends State<AdminMainNavigation> {
   int _selectedIndex = 0;
   
+  // 2. MASUKKAN HALAMAN MAP KE DALAM LIST
   final List<Widget> _pages = [
     const AdminDashboardScreen(),
-    
-    // 2. GANTI PLACEHOLDER MENJADI INI
     const PatientListPage(), 
-    
-    const Scaffold(
-      body: Center(
-        child: Text('Halaman Map Persebaran\n(Dikerjakan di Minggu 12)', textAlign: TextAlign.center),
-      ),
-    ),
+    const AdminMapPage(), // <-- Menggantikan tulisan "Dikerjakan di Minggu 12"
     const AdminProfileScreen(),
   ];
 

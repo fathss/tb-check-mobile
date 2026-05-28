@@ -22,18 +22,25 @@ class PatientModel {
   });
 
   factory PatientModel.fromJson(Map<String, dynamic> json) {
+    // Tangkap baik huruf kecil maupun huruf besar dari JSON (Kebal dari C#)
+    final rawLat = json['latitude'] ?? json['Latitude'];
+    final rawLng = json['longitude'] ?? json['Longitude'];
+    final rawAddress = json['address'] ?? json['Address']; // <-- INI YANG TERTINGGAL
+
     return PatientModel(
       id: json['id'] ?? '',
       nik: json['nik'] ?? '',
       fullName: json['fullName'] ?? '',
       tbType: json['tbType'] ?? '',
-      status: json['status'] ?? 'Aktif',
+      status: json['status'] ?? '',
+      // Lebih aman agar tidak crash jika tanggal dari API null
       diagnosisDate: json['diagnosisDate'] != null 
           ? DateTime.parse(json['diagnosisDate']) 
-          : DateTime.now(),
-      address: json['address'],
-      latitude: json['latitude'] != null ? (json['latitude'] as num).toDouble() : null,
-      longitude: json['longitude'] != null ? (json['longitude'] as num).toDouble() : null,
+          : DateTime.now(), 
+      
+      address: rawAddress, // <-- MASUKKAN TANGKAPAN ALAMATNYA DI SINI
+      latitude: rawLat != null ? (rawLat as num).toDouble() : null,
+      longitude: rawLng != null ? (rawLng as num).toDouble() : null,
     );
   }
 }

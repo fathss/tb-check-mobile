@@ -9,8 +9,10 @@ import 'package:tbcheck_app/core/navigation/main_page.dart';
 
 // --- Features ---
 import 'package:tbcheck_app/features/admin_faskes/patients/providers/patient_provider.dart';
-import 'package:tbcheck_app/features/admin_faskes/dashboard/providers/dashboard_provider.dart'; // Import Baru
+import 'package:tbcheck_app/features/admin_faskes/dashboard/providers/dashboard_provider.dart'; 
 import 'package:tbcheck_app/features/admin_faskes/navigation/admin_main_navigation.dart';
+// IMPORT PROVIDER BARU:
+import 'package:tbcheck_app/features/admin_faskes/profile/providers/faskes_profile_provider.dart';
 
 Future<void> main() async {
   // 1. Load Environment Variables
@@ -26,7 +28,9 @@ Future<void> main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => PatientProvider()),
-        ChangeNotifierProvider(create: (_) => DashboardProvider()), // <-- Provider Baru
+        ChangeNotifierProvider(create: (_) => DashboardProvider()), 
+        // DAFTARKAN PROVIDER BARU:
+        ChangeNotifierProvider(create: (_) => FaskesProfileProvider()),
       ],
       child: const MyApp(),
     ),
@@ -43,10 +47,8 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         fontFamily: "PlusJakartaSans",
-        // Perbaikan typo: .fromSeed -> ColorScheme.fromSeed
         colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
       ),
-      // Set default route atau home
       home: const AdminMainNavigation(),
     );
   }
