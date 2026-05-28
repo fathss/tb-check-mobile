@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:tbcheck_app/core/theme/app_colors.dart';
+import '../pages/schedule_page.dart';
 import '../widgets/medicine_schedule_card.dart';
 import '../widgets/medicine_item_card.dart';
 import 'package:tbcheck_app/features/medicine/pages/medicine_detail_page.dart';
@@ -28,20 +30,34 @@ class MedicinePage extends StatelessWidget {
 
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
-                    Text(
+
+                  children: [
+                    const Text(
                       "Jadwal Hari Ini",
+
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
 
-                    Text(
-                      "Lihat Kalender",
-                      style: TextStyle(
-                        color: Color(0xFF2563EB),
-                        fontWeight: FontWeight.bold,
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SchedulePage(),
+                          ),
+                        );
+                      },
+
+                      child: Text(
+                        "Lihat Kalender",
+
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ],

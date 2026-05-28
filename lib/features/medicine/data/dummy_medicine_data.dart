@@ -10,17 +10,21 @@ final List<MedicineModel> medicineList = [
     consumeCondition: "After Eating",
 
     isCompleted: true,
+    createdAt: DateTime(2026, 5, 20),
   ),
 
   MedicineModel(
     name: "Rifampisin",
+
     dosage: "450 mg",
 
-    schedules: ["06:00"],
+    schedules: ["06:00", "19:00"],
 
-    consumeCondition: "Sesudah Makan",
+    consumeCondition: "Sebelum Makan",
 
     isCompleted: false,
+
+    createdAt: DateTime(2026, 5, 20),
   ),
 
   MedicineModel(
@@ -32,6 +36,7 @@ final List<MedicineModel> medicineList = [
     consumeCondition: "Sebelum Makan",
 
     isCompleted: false,
+    createdAt: DateTime(2026, 5, 20),
   ),
 
   MedicineModel(
@@ -43,5 +48,6 @@ final List<MedicineModel> medicineList = [
     consumeCondition: "After Eating",
 
     isCompleted: true,
+    createdAt: DateTime(2026, 5, 20),
   ),
 ];
