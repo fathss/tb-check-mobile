@@ -51,7 +51,7 @@ class MedicinePage extends StatelessWidget {
 
                 const MedicineScheduleCard(
                   time: "06:00",
-                  period: "Pagi",
+
                   medicineName: "Rifampisin",
                   description: "1 Tablet, Sebelum Makan",
                   initialDone: true,
@@ -59,7 +59,6 @@ class MedicinePage extends StatelessWidget {
 
                 const MedicineScheduleCard(
                   time: "19:00",
-                  period: "Malam",
                   medicineName: "Rifampisin",
                   description: "1 Tablet, Sebelum Makan",
                   initialDone: false,
@@ -93,7 +92,7 @@ class MedicinePage extends StatelessWidget {
                 MedicineItemCard(
                   title: "Pyrazinamide, 500 mg",
                   subtitle: "3 pill, once per day",
-                  schedule: "07:00 am - After Eating",
+                  schedule: "07:00 am - Sebelum Makan",
 
                   onTap: () {
                     Navigator.push(
@@ -104,7 +103,7 @@ class MedicinePage extends StatelessWidget {
                           function: "Untuk pengobatan TBC",
                           consumeTimes: ["07:00 AM"],
                           dose: "3 pill, once per day",
-                          condition: "After Eating",
+                          condition: "Sebelum Makan",
                           activeDays: const [
                             true,
                             false,
@@ -123,7 +122,7 @@ class MedicinePage extends StatelessWidget {
                 MedicineItemCard(
                   title: "Pyrazinamide, 500 mg",
                   subtitle: "3 pill, once per day",
-                  schedule: "07:00 am - After Eating",
+                  schedule: "07:00 am - Sesudah Makan",
 
                   onTap: () {
                     Navigator.push(
@@ -134,7 +133,7 @@ class MedicinePage extends StatelessWidget {
                           function: "Untuk pengobatan TBC",
                           consumeTimes: ["07:00 AM"],
                           dose: "3 pill, once per day",
-                          condition: "After Eating",
+                          condition: "Sesudah Makan",
                           activeDays: const [
                             true,
                             false,

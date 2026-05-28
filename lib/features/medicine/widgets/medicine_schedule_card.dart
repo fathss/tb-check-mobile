@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../../core/widgets/time_helper.dart';
 
 class MedicineScheduleCard extends StatefulWidget {
   final String time;
-  final String period;
+
   final String medicineName;
   final String description;
   final bool initialDone;
@@ -10,7 +11,7 @@ class MedicineScheduleCard extends StatefulWidget {
   const MedicineScheduleCard({
     super.key,
     required this.time,
-    required this.period,
+
     required this.medicineName,
     required this.description,
     required this.initialDone,
@@ -58,18 +59,10 @@ class _MedicineScheduleCardState extends State<MedicineScheduleCard> {
 
         child: Row(
           children: [
-            Column(
-              children: [
-                Text(
-                  widget.time,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
+            Text(
+              "${widget.time} ${TimeHelper.getPeriodLabel(widget.time)}",
 
-                Text(widget.period),
-              ],
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
 
             const SizedBox(width: 16),

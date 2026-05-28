@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 
 class MedicineDetailController {
   late TextEditingController medicineNameController;
+
   late TextEditingController functionController;
+
   List<TextEditingController> consumeTimeControllers = [];
+
   late TextEditingController doseController;
-  late TextEditingController conditionController;
+
+  late String selectedCondition;
 
   List<bool> activeDays = [];
 
@@ -24,21 +28,24 @@ class MedicineDetailController {
     consumeTimeControllers = consumeTimes
         .map((time) => TextEditingController(text: time))
         .toList();
+
     doseController = TextEditingController(text: dose);
 
-    conditionController = TextEditingController(text: condition);
+    selectedCondition = condition;
 
     activeDays = List.from(days);
   }
 
   void dispose() {
     medicineNameController.dispose();
+
     functionController.dispose();
+
     for (final controller in consumeTimeControllers) {
       controller.dispose();
     }
+
     doseController.dispose();
-    conditionController.dispose();
   }
 
   void toggleDay(int index) {
@@ -53,5 +60,9 @@ class MedicineDetailController {
     consumeTimeControllers[index].dispose();
 
     consumeTimeControllers.removeAt(index);
+  }
+
+  void changeCondition(String value) {
+    selectedCondition = value;
   }
 }
