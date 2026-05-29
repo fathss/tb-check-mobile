@@ -23,9 +23,7 @@ class _SchedulePageState extends State<SchedulePage> {
   void initState() {
     super.initState();
 
-    final now = DateTime.now();
-
-    selectedDate = DateTime(now.year, now.month, now.day);
+    selectedDate = userRegisteredAt;
   }
 
   @override
@@ -88,7 +86,7 @@ class _SchedulePageState extends State<SchedulePage> {
                   const Text(
                     "Jadwal Keseluruhan",
 
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
