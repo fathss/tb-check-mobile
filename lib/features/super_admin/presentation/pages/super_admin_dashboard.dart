@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tbcheck_app/core/constants/app_constants.dart';
 import 'package:tbcheck_app/core/theme/app_colors.dart';
+import 'package:tbcheck_app/features/auth/auth_page.dart';
+import 'package:tbcheck_app/features/auth/presentation/controllers/auth_controller.dart';
 import 'package:tbcheck_app/features/super_admin/presentation/pages/faskes_management/faskes_management_page.dart';
 import 'package:tbcheck_app/features/super_admin/presentation/pages/user_admin_management/user_management_page.dart';
 import 'package:tbcheck_app/features/super_admin/presentation/controllers/super_admin_controller.dart';
 import 'package:tbcheck_app/features/super_admin/presentation/widgets/dashboard_stat_card.dart';
 import 'package:tbcheck_app/features/super_admin/presentation/widgets/dashboard_menu_card.dart';
+import 'package:tbcheck_app/features/auth/data/datasources/auth_storage.dart';
 
 class SuperAdminDashboard extends ConsumerWidget {
   const SuperAdminDashboard({
@@ -19,7 +22,28 @@ class SuperAdminDashboard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(superAdminDashboardProvider);
-    final profileAsync = ref.watch(superAdminProfileProvider(superAdminId));
+    final userIdAsync = ref.watch(sessionUserIdProvider);
+
+    if (userIdAsync.isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (userIdAsync.hasError) {
+      return const Scaffold(body: Center(child: Text('Gagal memuat session')));
+    }
+
+    final sessionId = userIdAsync.value;
+    if (sessionId == null || sessionId.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const AuthPage()),
+          (route) => false,
+        );
+      });
+      return const Scaffold();
+    }
+
+    final profileAsync = ref.watch(superAdminProfileProvider(sessionId));
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -90,7 +114,14 @@ class SuperAdminDashboard extends ConsumerWidget {
             padding: const EdgeInsets.only(right: 20),
             child: Center(
               child: TextButton(
-                onPressed: () {},
+                onPressed: () async {
+                  await ref.read(authControllerProvider).logout();
+                  if (!context.mounted) return;
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const AuthPage()),
+                    (route) => false,
+                  );
+                },
                 style: TextButton.styleFrom(
                   backgroundColor: AppColors.errorBg,
                   padding: const EdgeInsets.symmetric(

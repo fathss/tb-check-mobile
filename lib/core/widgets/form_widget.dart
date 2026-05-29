@@ -6,7 +6,7 @@ class FormWidget extends StatelessWidget {
   final List<Widget> fields;
   final String buttonText;
   final RichText footer;
-  final VoidCallback onButtonPressed;
+  final VoidCallback? onButtonPressed;
 
   const FormWidget({
     super.key,

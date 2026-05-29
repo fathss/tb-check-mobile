@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tbcheck_app/core/theme/app_colors.dart';
-import 'package:tbcheck_app/features/super_admin/pages/super_admin_dashboard.dart';
-import 'package:tbcheck_app/features/super_admin/pages/super_admin_profile_page.dart';
+import 'package:tbcheck_app/features/super_admin/presentation/pages/super_admin_dashboard.dart';
+import 'package:tbcheck_app/features/super_admin/presentation/pages/super_admin_profile_page.dart';
 
 class SuperAdminMainPage extends StatefulWidget {
   const SuperAdminMainPage({super.key});
@@ -15,7 +15,9 @@ class _SuperAdminMainPageState extends State<SuperAdminMainPage> {
 
   final List<Widget> _pages = const [
     SuperAdminDashboard(),
-    SuperAdminProfilePage(),
+    SuperAdminProfilePage(
+      superAdminId: 'current',
+    ), // Ganti dengan ID super admin yang sesuai
   ];
 
   @override

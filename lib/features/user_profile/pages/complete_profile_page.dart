@@ -1,19 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tbcheck_app/core/theme/app_colors.dart';
+import 'package:tbcheck_app/core/navigation/main_page.dart';
 import 'package:tbcheck_app/core/widgets/form_widget.dart';
+import 'package:tbcheck_app/features/auth/data/datasources/auth_storage.dart';
+import 'package:tbcheck_app/features/user_profile/presentation/controllers/user_profile_controller.dart';
 
-class CompleteProfilePage extends StatefulWidget {
+class CompleteProfilePage extends ConsumerStatefulWidget {
   const CompleteProfilePage({super.key});
 
   @override
-  State<CompleteProfilePage> createState() => _CompleteProfilePageState();
+  ConsumerState<CompleteProfilePage> createState() =>
+      _CompleteProfilePageState();
 }
 
-class _CompleteProfilePageState extends State<CompleteProfilePage> {
+class _CompleteProfilePageState extends ConsumerState<CompleteProfilePage> {
   late final TextEditingController _nikController;
   late final TextEditingController _namaLengkapController;
   late final TextEditingController _tanggalLahirController;
   String? _selectedGender;
+  bool _isLoading = false;
 
   static const List<String> _genderOptions = <String>['Laki-Laki', 'Perempuan'];
 
@@ -66,9 +72,58 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
           _buildGenderField(),
         ],
         buttonText: 'Simpan Profil',
-        onButtonPressed: () {
-          // TODO: Submit profile completion data.
-        },
+        onButtonPressed: _isLoading
+            ? null
+            : () async {
+                final nik = _nikController.text.trim();
+                final fullName = _namaLengkapController.text.trim();
+                final dateOfBirth = _parseSelectedDate();
+                final gender = _selectedGender;
+
+                if (nik.isEmpty ||
+                    fullName.isEmpty ||
+                    dateOfBirth == null ||
+                    gender == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Lengkapi semua data profil')),
+                  );
+                  return;
+                }
+
+                final storage = ref.read(authStorageProvider);
+                final userId = await storage.getUserId();
+                if (userId == null || userId.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('User ID tidak ditemukan')),
+                  );
+                  return;
+                }
+
+                setState(() => _isLoading = true);
+                try {
+                  final controller = ref.read(userProfileControllerProvider);
+                  await controller.completeProfile(
+                    userId: userId,
+                    fullName: fullName,
+                    nik: nik,
+                    dateOfBirth: dateOfBirth,
+                    gender: gender,
+                  );
+
+                  if (!mounted) return;
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const MainPage()),
+                    (route) => false,
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(_messageFromError(e))));
+                } finally {
+                  if (mounted) setState(() => _isLoading = false);
+                }
+              },
         footer: RichText(
           text: const TextSpan(
             text: ' ',
@@ -216,5 +271,10 @@ class _CompleteProfilePageState extends State<CompleteProfilePage> {
     final String day = date.day.toString().padLeft(2, '0');
     final String month = date.month.toString().padLeft(2, '0');
     return '$day/$month/${date.year}';
+  }
+
+  String _messageFromError(Object error) {
+    final text = error.toString();
+    return text.replaceFirst(RegExp(r'^Exception:\s*'), '');
   }
 }

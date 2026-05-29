@@ -16,17 +16,20 @@ class _RegisterPageState extends State<RegisterPage> {
   late TextEditingController _emailController;
   late TextEditingController _passwordController;
   late TextEditingController _confirmPasswordController;
+  late TextEditingController _usernameController;
 
   @override
   void initState() {
     super.initState();
     _emailController = TextEditingController();
+    _usernameController = TextEditingController();
     _passwordController = TextEditingController();
     _confirmPasswordController = TextEditingController();
   }
 
   @override
   void dispose() {
+    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -39,6 +42,11 @@ class _RegisterPageState extends State<RegisterPage> {
       body: FormWidget(
         titleText: 'Create New Account',
         fields: [
+          AuthInputField(
+            hintText: 'Username',
+            prefixIcon: Icons.person_outline,
+            controller: _usernameController,
+          ),
           AuthInputField(
             hintText: 'Email',
             prefixIcon: Icons.email_outlined,

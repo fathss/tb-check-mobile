@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tbcheck_app/core/theme/app_colors.dart';
 import 'package:tbcheck_app/features/auth/auth_page.dart';
+import 'package:tbcheck_app/features/auth/data/datasources/auth_storage.dart';
 import 'widgets/landing_slide.dart';
 
 class LandingPage extends StatefulWidget {
@@ -12,11 +13,13 @@ class LandingPage extends StatefulWidget {
 
 class _LandingPageState extends State<LandingPage>
     with TickerProviderStateMixin {
+  final AuthStorage _authStorage = AuthStorage();
   late final AnimationController _ctrl;
   late final Animation<Offset> _slide;
   late final Animation<double> _fade;
   late final AnimationController _splashCtrl;
   late final Animation<double> _splashOpacity;
+  bool _showSlides = false;
 
   final slides = [
     {
@@ -62,13 +65,43 @@ class _LandingPageState extends State<LandingPage>
       end: 0.0,
     ).animate(CurvedAnimation(parent: _splashCtrl, curve: Curves.easeOut));
 
-    // keep splash visible ~2s, then fade it out and start content animation
-    Future.delayed(const Duration(milliseconds: 2000), () async {
+    _initializeFlow();
+  }
+
+  Future<void> _initializeFlow() async {
+    final seenLanding = await _authStorage.hasSeenLanding();
+
+    if (!mounted) return;
+
+    if (!seenLanding) {
+      await _authStorage.markLandingSeen();
       if (!mounted) return;
-      await _splashCtrl.forward();
-      if (!mounted) return;
+      setState(() {
+        _showSlides = true;
+      });
+    }
+
+    await Future.delayed(const Duration(milliseconds: 2000));
+    if (!mounted) return;
+
+    await _splashCtrl.forward();
+    if (!mounted) return;
+
+    if (_showSlides) {
       _ctrl.forward();
-    });
+      return;
+    }
+
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const AuthPage(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    );
   }
 
   @override
@@ -170,7 +203,7 @@ class _LandingPageState extends State<LandingPage>
                               setState(() => currentSlideIndex += 1);
                             } else {
                               // Navigate with simultaneous fade animations
-                              Navigator.of(context).push(
+                              Navigator.of(context).pushReplacement(
                                 PageRouteBuilder(
                                   pageBuilder:
                                       (
