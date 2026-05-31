@@ -1,11 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:tbcheck_app/features/medicine/medicine_card.dart';
+import 'package:tbcheck_app/features/home/widgets/treatment_progress_card.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:tbcheck_app/features/medicine/pages/medicine_page.dart';
+import '../medicine/providers/medicine_consumption_log_provider.dart';
+import '../../core/constants/app_constants.dart';
+import '../medicine/providers/medicine_provider.dart';
+import '../medicine/pages/medicine_page.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final logsAsync = ref.watch(
+      medicineConsumptionLogsProvider(AppConstants.dummyPatientId),
+    );
+    final medicinesAsync = ref.watch(
+      medicineProvider(AppConstants.dummyPatientId),
+    );
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       body: SafeArea(
@@ -64,68 +77,34 @@ class HomePage extends StatelessWidget {
               const SizedBox(height: 20),
 
               // 🔵 CARD PROGRESS
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF1E5BD8), Color(0xFF3B82F6)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        "Fase Intensif",
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
+              logsAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
 
-                    const SizedBox(height: 16),
+                error: (e, _) => Text(e.toString()),
 
-                    const Text(
-                      "Kamu telah menyelesaikan 55% dari total pengobatan. Terus semangat!",
-                      style: TextStyle(color: Colors.white, fontSize: 14),
-                    ),
+                data: (logs) {
+                  final currentDose = logs.length;
 
-                    const SizedBox(height: 16),
+                  const totalDose = 180;
 
-                    const Text(
-                      "45 / 180 Dosis",
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
+                  final progress = currentDose / totalDose;
 
-                    const SizedBox(height: 10),
+                  return TreatmentProgressCard(
+                    phase: currentDose < 60 ? "Fase Intensif" : "Fase Lanjutan",
 
-                    // progress bar
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: LinearProgressIndicator(
-                        value: 0.55,
-                        minHeight: 8,
-                        backgroundColor: Colors.white.withOpacity(0.3),
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                    description:
+                        "Kamu telah menyelesaikan "
+                        "${(progress * 100).toInt()}% "
+                        "dari total pengobatan.",
+
+                    currentDose: currentDose,
+
+                    totalDose: totalDose,
+
+                    progress: progress.clamp(0, 1),
+                  );
+                },
               ),
-
               const SizedBox(height: 24),
 
               const Text(
@@ -137,21 +116,52 @@ class HomePage extends StatelessWidget {
 
               // 🔹 LIST JADWAL
               Expanded(
-                child: ListView(
-                  children: const [
-                    MedicineCard(
-                      time: "06:00 AM",
-                      title: "Rifampisin & Isoniazid",
-                      subtitle: "1 Tablet, Sebelum Makan",
-                      isDone: true,
-                    ),
-                    MedicineCard(
-                      time: "19:00 PM",
-                      title: "Vitamin B6",
-                      subtitle: "1 Tablet, Sesudah Makan",
-                      isDone: false,
-                    ),
-                  ],
+                child: medicinesAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+
+                  error: (e, _) => Center(child: Text(e.toString())),
+
+                  data: (medicines) {
+                    final logs = logsAsync.value ?? [];
+
+                    final cards = <Widget>[];
+
+                    for (final medicine in medicines) {
+                      for (final schedule in medicine.schedules) {
+                        cards.add(
+                          MedicineCard(
+                            time: schedule,
+
+                            title: "${medicine.name}, ${medicine.dosage}",
+
+                            subtitle: "1 Tablet, ${medicine.consumeCondition}",
+
+                            isDone: logs.any(
+                              (log) =>
+                                  log.medicineId == medicine.id &&
+                                  log.scheduleTime == schedule,
+                            ),
+
+                            onConfirm: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const MedicinePage(),
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      }
+                    }
+
+                    if (cards.isEmpty) {
+                      return const Center(child: Text("Belum ada jadwal obat"));
+                    }
+
+                    return ListView(children: cards.take(3).toList());
+                  },
                 ),
               ),
             ],

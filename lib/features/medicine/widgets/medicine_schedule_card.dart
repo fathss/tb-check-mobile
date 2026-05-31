@@ -2,19 +2,26 @@ import 'package:flutter/material.dart';
 import '../../../core/widgets/time_helper.dart';
 
 class MedicineScheduleCard extends StatefulWidget {
+  final String medicineId;
+  final String patientId;
+  final String scheduleTime;
   final String time;
-
   final String medicineName;
   final String description;
   final bool initialDone;
+  final Future<void> Function(bool value)? onChanged;
 
   const MedicineScheduleCard({
     super.key,
+    required this.medicineId,
+    required this.patientId,
+    required this.scheduleTime,
     required this.time,
 
     required this.medicineName,
     required this.description,
     required this.initialDone,
+    required this.onChanged,
   });
 
   @override
@@ -30,9 +37,26 @@ class _MedicineScheduleCardState extends State<MedicineScheduleCard> {
     isDone = widget.initialDone;
   }
 
-  void toggleStatus() {
+  @override
+  void didUpdateWidget(covariant MedicineScheduleCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.initialDone != widget.initialDone) {
+      setState(() {
+        isDone = widget.initialDone;
+      });
+    }
+  }
+
+  Future<void> toggleStatus() async {
+    final newValue = !isDone;
+
+    if (widget.onChanged != null) {
+      await widget.onChanged!(newValue);
+    }
+
     setState(() {
-      isDone = !isDone;
+      isDone = newValue;
     });
   }
 

@@ -6,12 +6,28 @@ import '../widgets/medicine_schedule_card.dart';
 import '../widgets/medicine_item_card.dart';
 import 'package:tbcheck_app/features/medicine/pages/medicine_detail_page.dart';
 import '../pages/medicine_list_page.dart';
+import '../models/medicine_model.dart';
+import 'package:tbcheck_app/core/constants/app_constants.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/medicine_provider.dart';
+import '../providers/medicine_consumption_log_provider.dart';
+import '../utils/medicine_action_helper.dart';
+import '../../../core/widgets/app_snackbar.dart';
 
-class MedicinePage extends StatelessWidget {
+class MedicinePage extends ConsumerWidget {
   const MedicinePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final medicinesAsync = ref.watch(
+      medicineProvider(AppConstants.dummyPatientId),
+    );
+
+    final logsAsync = ref.watch(
+      medicineConsumptionLogsProvider(AppConstants.dummyPatientId),
+    );
+
+    final logs = logsAsync.value ?? [];
     return Scaffold(
       backgroundColor: Colors.white,
 
@@ -66,21 +82,70 @@ class MedicinePage extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                const MedicineScheduleCard(
-                  time: "06:00",
+                medicinesAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
 
-                  medicineName: "Rifampisin",
-                  description: "1 Tablet, Sebelum Makan",
-                  initialDone: true,
+                  error: (e, _) => Text(e.toString()),
+
+                  data: (medicines) {
+                    final todaySchedules = <Widget>[];
+
+                    for (final medicine in medicines) {
+                      for (final schedule in medicine.schedules) {
+                        todaySchedules.add(
+                          MedicineScheduleCard(
+                            medicineId: medicine.id,
+                            patientId: medicine.patientId,
+                            scheduleTime: schedule,
+
+                            time: schedule,
+
+                            medicineName:
+                                "${medicine.name}, ${medicine.dosage}",
+
+                            description:
+                                "1 Tablet - ${medicine.consumeCondition}",
+
+                            initialDone: logs.any(
+                              (log) =>
+                                  log.medicineId == medicine.id &&
+                                  log.scheduleTime == schedule,
+                            ),
+
+                            onChanged: (value) async {
+                              if (!value) return;
+
+                              try {
+                                await MedicineActionHelper.markAsTaken(
+                                  ref: ref,
+                                  medicine: medicine,
+                                  scheduleTime: schedule,
+                                );
+
+                                if (context.mounted) {
+                                  AppSnackbar.showSuccess(
+                                    context,
+                                    "Obat berhasil ditandai telah diminum",
+                                  );
+                                }
+                              } catch (_) {
+                                if (context.mounted) {
+                                  AppSnackbar.showError(
+                                    context,
+                                    "Gagal menyimpan konsumsi obat",
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                        );
+                      }
+                    }
+
+                    return Column(children: todaySchedules.take(3).toList());
+                  },
                 ),
-
-                const MedicineScheduleCard(
-                  time: "19:00",
-                  medicineName: "Rifampisin",
-                  description: "1 Tablet, Sebelum Makan",
-                  initialDone: false,
-                ),
-
                 const SizedBox(height: 40),
 
                 Row(
@@ -120,64 +185,47 @@ class MedicinePage extends StatelessWidget {
 
                 const SizedBox(height: 24),
 
-                MedicineItemCard(
-                  title: "Pyrazinamide, 500 mg",
-                  subtitle: "3 pill, once per day",
-                  schedule: "07:00 am - Sebelum Makan",
+                medicinesAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
 
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => MedicineDetailPage(
-                          medicineName: "Pyrazinamide, 500 mg",
-                          function: "Untuk pengobatan TBC",
-                          consumeTimes: ["07:00 AM"],
-                          dose: "3 pill, once per day",
-                          stock: "30",
-                          condition: "Sebelum Makan",
-                          activeDays: const [
-                            true,
-                            false,
-                            true,
-                            false,
-                            true,
-                            false,
-                            false,
-                          ],
+                  error: (e, _) => Text(e.toString()),
+
+                  data: (medicines) {
+                    if (medicines.isEmpty) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Text("Belum ada obat"),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    }
 
-                MedicineItemCard(
-                  title: "Pyrazinamide, 500 mg",
-                  subtitle: "3 pill, once per day",
-                  schedule: "07:00 am - Sesudah Makan",
+                    return Column(
+                      children: medicines.take(3).map((medicine) {
+                        final firstSchedule = medicine.schedules.isNotEmpty
+                            ? medicine.schedules.first
+                            : "-";
 
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => MedicineDetailPage(
-                          medicineName: "Pyrazinamide, 500 mg",
-                          function: "Untuk pengobatan TBC",
-                          consumeTimes: ["07:00 AM"],
-                          dose: "3 pill, once per day",
-                          stock: "30",
-                          condition: "Sesudah Makan",
-                          activeDays: const [
-                            true,
-                            false,
-                            true,
-                            false,
-                            true,
-                            false,
-                            false,
-                          ],
-                        ),
-                      ),
+                        return MedicineItemCard(
+                          title: "${medicine.name}, ${medicine.dosage}",
+
+                          subtitle: "Stok ${medicine.stock} tablet",
+
+                          schedule:
+                              "$firstSchedule - ${medicine.consumeCondition}",
+
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    MedicineDetailPage(medicine: medicine),
+                              ),
+                            );
+                          },
+                        );
+                      }).toList(),
                     );
                   },
                 ),

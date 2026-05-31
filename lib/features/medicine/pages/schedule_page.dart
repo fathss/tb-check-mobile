@@ -1,18 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:tbcheck_app/core/theme/app_colors.dart';
 import 'package:tbcheck_app/core/widgets/date_helper.dart';
-import 'package:tbcheck_app/features/medicine/data/dummy_medicine_data.dart';
+// import 'package:tbcheck_app/features/medicine/data/dummy_medicine_data.dart';
 import 'package:tbcheck_app/features/medicine/models/medicine_model.dart';
 import 'package:tbcheck_app/features/medicine/widgets/medicine_schedule_card.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:tbcheck_app/core/constants/app_constants.dart';
+import '../providers/medicine_provider.dart';
+import '../models/medicine_consumption_log_model.dart';
+import '../providers/medicine_consumption_log_provider.dart';
+import '../../../core/widgets/app_snackbar.dart';
+import '../utils/medicine_action_helper.dart';
 
-class SchedulePage extends StatefulWidget {
+class SchedulePage extends ConsumerStatefulWidget {
   const SchedulePage({super.key});
 
   @override
-  State<SchedulePage> createState() => _SchedulePageState();
+  ConsumerState<SchedulePage> createState() => _SchedulePageState();
 }
 
-class _SchedulePageState extends State<SchedulePage> {
+class _SchedulePageState extends ConsumerState<SchedulePage> {
+  final ScrollController _scrollController = ScrollController();
+
   /// USER REGISTER DATE
   final DateTime userRegisteredAt = DateTime(2026, 5, 17);
 
@@ -23,7 +32,25 @@ class _SchedulePageState extends State<SchedulePage> {
   void initState() {
     super.initState();
 
-    selectedDate = userRegisteredAt;
+    selectedDate = DateTime.now();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (!_scrollController.hasClients) return;
+
+        final todayIndex = DateTime.now().difference(userRegisteredAt).inDays;
+
+        const itemWidth = 84.0;
+
+        _scrollController.jumpTo(todayIndex * itemWidth);
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -31,30 +58,18 @@ class _SchedulePageState extends State<SchedulePage> {
     /// GENERATED DATES
     final dates = DateHelper.generateDates(
       startDate: userRegisteredAt,
-      totalDays: 30,
+      totalDays: 180,
     );
 
-    /// FILTER MEDICINES BASED ON DATE
-    final filteredMedicines = medicineList.where((medicine) {
-      return !selectedDate.isBefore(medicine.createdAt);
-    }).toList();
+    final medicinesAsync = ref.watch(
+      medicineProvider(AppConstants.dummyPatientId),
+    );
 
-    /// GROUP MEDICINES BY SCHEDULE
-    final Map<String, List<MedicineModel>> groupedMedicines = {};
+    final logsAsync = ref.watch(
+      medicineConsumptionLogsProvider(AppConstants.dummyPatientId),
+    );
 
-    for (final medicine in filteredMedicines) {
-      for (final schedule in medicine.schedules) {
-        if (!groupedMedicines.containsKey(schedule)) {
-          groupedMedicines[schedule] = [];
-        }
-
-        groupedMedicines[schedule]!.add(medicine);
-      }
-    }
-
-    /// SORT TIME
-    final sortedSchedules = groupedMedicines.keys.toList()
-      ..sort((a, b) => a.compareTo(b));
+    final logs = logsAsync.value ?? [];
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -98,6 +113,7 @@ class _SchedulePageState extends State<SchedulePage> {
                 height: 95,
 
                 child: ListView.separated(
+                  controller: _scrollController,
                   scrollDirection: Axis.horizontal,
 
                   itemCount: dates.length,
@@ -187,12 +203,35 @@ class _SchedulePageState extends State<SchedulePage> {
 
               /// CONTENT
               Expanded(
-                child: sortedSchedules.isEmpty
-                    /// EMPTY STATE
-                    ? Center(
+                child: medicinesAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+
+                  error: (e, _) => Center(child: Text(e.toString())),
+
+                  data: (medicineList) {
+                    final filteredMedicines = medicineList.where((medicine) {
+                      return !selectedDate.isBefore(medicine.createdAt);
+                    }).toList();
+
+                    final Map<String, List<MedicineModel>> groupedMedicines =
+                        {};
+
+                    for (final medicine in filteredMedicines) {
+                      for (final schedule in medicine.schedules) {
+                        groupedMedicines.putIfAbsent(schedule, () => []);
+
+                        groupedMedicines[schedule]!.add(medicine);
+                      }
+                    }
+
+                    final sortedSchedules = groupedMedicines.keys.toList()
+                      ..sort();
+
+                    if (sortedSchedules.isEmpty) {
+                      return Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
-
                           children: [
                             Icon(
                               Icons.event_busy_rounded,
@@ -202,71 +241,105 @@ class _SchedulePageState extends State<SchedulePage> {
 
                             const SizedBox(height: 20),
 
-                            Text(
-                              "Tidak ada jadwal obat",
-
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-
-                            const SizedBox(height: 8),
-
-                            Text(
-                              "Tidak ada obat yang perlu diminum hari ini",
-
-                              textAlign: TextAlign.center,
-
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
+                            const Text("Tidak ada jadwal obat"),
                           ],
                         ),
-                      )
-                    /// LIST
-                    : ListView.builder(
-                        itemCount: sortedSchedules.length,
+                      );
+                    }
 
-                        itemBuilder: (context, index) {
-                          final schedule = sortedSchedules[index];
+                    return ListView.builder(
+                      itemCount: sortedSchedules.length,
 
-                          final medicines = groupedMedicines[schedule]!;
+                      itemBuilder: (context, index) {
+                        final schedule = sortedSchedules[index];
 
-                          final split = schedule.split(":");
+                        final medicines = groupedMedicines[schedule]!;
 
-                          final hour = int.parse(split[0]);
+                        final split = schedule.split(":");
 
-                          final minute = split[1];
+                        final displayTime =
+                            "${int.parse(split[0])}:${split[1]}";
 
-                          final displayTime = "$hour:$minute";
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        return Column(
+                          children: [
+                            ...medicines.map((medicine) {
+                              final done = logs.any(
+                                (log) =>
+                                    log.medicineId == medicine.id &&
+                                    log.scheduleTime == schedule &&
+                                    log.consumedAt != null &&
+                                    log.consumedAt!.year == selectedDate.year &&
+                                    log.consumedAt!.month ==
+                                        selectedDate.month &&
+                                    log.consumedAt!.day == selectedDate.day,
+                              );
 
-                            children: [
-                              /// MEDICINE LIST
-                              ...medicines.map((medicine) {
-                                return MedicineScheduleCard(
-                                  time: displayTime,
+                              print(
+                                "DATE=${selectedDate.toString()} "
+                                "MED=${medicine.name} "
+                                "TIME=$schedule "
+                                "DONE=$done",
+                              );
+                              return MedicineScheduleCard(
+                                medicineId: medicine.id,
 
-                                  medicineName:
-                                      "${medicine.name}, ${medicine.dosage}",
+                                patientId: medicine.patientId,
 
-                                  description:
-                                      "1 Tablet - ${medicine.consumeCondition.toLowerCase()}",
+                                scheduleTime: schedule,
 
-                                  initialDone: medicine.isCompleted,
-                                );
-                              }),
+                                time: displayTime,
 
-                              const SizedBox(height: 5),
-                            ],
-                          );
-                        },
-                      ),
+                                medicineName:
+                                    "${medicine.name}, ${medicine.dosage}",
+
+                                description:
+                                    "1 Tablet - ${medicine.consumeCondition.toLowerCase()}",
+
+                                initialDone: logs.any(
+                                  (log) =>
+                                      log.medicineId == medicine.id &&
+                                      log.scheduleTime == schedule &&
+                                      log.consumedAt != null &&
+                                      log.consumedAt!.year ==
+                                          selectedDate.year &&
+                                      log.consumedAt!.month ==
+                                          selectedDate.month &&
+                                      log.consumedAt!.day == selectedDate.day,
+                                ),
+                                //initialDone: done,
+                                onChanged: (value) async {
+                                  if (!value) return;
+
+                                  try {
+                                    await MedicineActionHelper.markAsTaken(
+                                      ref: ref,
+                                      medicine: medicine,
+                                      scheduleTime: schedule,
+                                    );
+
+                                    if (context.mounted) {
+                                      AppSnackbar.showSuccess(
+                                        context,
+                                        "Obat berhasil ditandai telah diminum",
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      AppSnackbar.showError(
+                                        context,
+                                        "Gagal menyimpan konsumsi obat",
+                                      );
+                                    }
+                                  }
+                                },
+                              );
+                            }),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
               ),
             ],
           ),

@@ -3,35 +3,22 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/app_snackbar.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../controllers/medicine_detail_controller.dart';
-
+import '../models/medicine_model.dart';
 import '../widgets/medicine_day_selector.dart';
 import '../widgets/medicine_input_section.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/medicine_provider.dart';
+import '../../../core/constants/app_constants.dart';
 
-class MedicineDetailPage extends StatefulWidget {
-  final String medicineName;
-  final String function;
-  final List<String> consumeTimes;
-  final String dose;
-  final String condition;
-  final List<bool> activeDays;
-  final String stock;
-
-  const MedicineDetailPage({
-    super.key,
-    required this.medicineName,
-    required this.function,
-    required this.consumeTimes,
-    required this.dose,
-    required this.condition,
-    required this.activeDays,
-    required this.stock,
-  });
+class MedicineDetailPage extends ConsumerStatefulWidget {
+  final MedicineModel medicine;
+  const MedicineDetailPage({super.key, required this.medicine});
 
   @override
-  State<MedicineDetailPage> createState() => _MedicineDetailPageState();
+  ConsumerState<MedicineDetailPage> createState() => _MedicineDetailPageState();
 }
 
-class _MedicineDetailPageState extends State<MedicineDetailPage> {
+class _MedicineDetailPageState extends ConsumerState<MedicineDetailPage> {
   final controller = MedicineDetailController();
 
   @override
@@ -39,13 +26,13 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
     super.initState();
 
     controller.init(
-      medicineName: widget.medicineName,
-      function: widget.function,
-      consumeTimes: widget.consumeTimes,
-      dose: widget.dose,
-      condition: widget.condition,
-      days: widget.activeDays,
-      stock: widget.stock,
+      medicineName: widget.medicine.name,
+      function: widget.medicine.function,
+      consumeTimes: widget.medicine.schedules,
+      dose: widget.medicine.dosage,
+      condition: widget.medicine.consumeCondition,
+      days: widget.medicine.activeDays,
+      stock: widget.medicine.stock.toString(),
     );
   }
 
@@ -197,7 +184,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                                             );
 
                                         if (pickedTime != null) {
-                                          final hour = pickedTime.hourOfPeriod
+                                          final hour = pickedTime.hour
                                               .toString()
                                               .padLeft(2, '0');
 
@@ -205,16 +192,11 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                                               .toString()
                                               .padLeft(2, '0');
 
-                                          final period =
-                                              pickedTime.period == DayPeriod.am
-                                              ? "AM"
-                                              : "PM";
-
                                           setState(() {
                                             controller
                                                     .consumeTimeControllers[index]
                                                     .text =
-                                                "$hour:$minute $period";
+                                                "$hour:$minute";
                                           });
                                         }
                                       },
@@ -325,8 +307,8 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                         ),
 
                         DropdownMenuItem(
-                          value: "Sesudah Makan",
-                          child: Text("Sesudah Makan"),
+                          value: "Setelah Makan",
+                          child: Text("Setelah Makan"),
                         ),
                       ],
 
@@ -385,12 +367,108 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                     PrimaryButton(
                       text: "Save Changes",
 
-                      onPressed: () {
-                        AppSnackbar.showSuccess(
-                          context,
-                          "Medicine schedule updated successfully",
-                        );
+                      onPressed: () async {
+                        try {
+                          final updatedMedicine = MedicineModel(
+                            id: widget.medicine.id,
+
+                            patientId: widget.medicine.patientId,
+
+                            name: controller.medicineNameController.text,
+
+                            function: controller.functionController.text,
+
+                            dosage: controller.doseController.text,
+
+                            stock:
+                                int.tryParse(controller.stockController.text) ??
+                                0,
+
+                            schedules: controller.consumeTimeControllers
+                                .map((e) => e.text)
+                                .toList(),
+
+                            consumeCondition: controller.selectedCondition,
+
+                            activeDays: controller.activeDays,
+
+                            selectedImageIndex:
+                                widget.medicine.selectedImageIndex,
+
+                            isCompleted: widget.medicine.isCompleted,
+
+                            createdAt: widget.medicine.createdAt,
+                          );
+
+                          await ref
+                              .read(medicineRepositoryProvider)
+                              .updateMedicine(updatedMedicine);
+
+                          ref.invalidate(
+                            medicineProvider(AppConstants.dummyPatientId),
+                          );
+
+                          if (!mounted) return;
+
+                          AppSnackbar.showSuccess(
+                            context,
+                            "Obat berhasil diperbarui",
+                          );
+
+                          Navigator.pop(context);
+                        } catch (e) {
+                          AppSnackbar.showError(context, e.toString());
+                        }
                       },
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton(
+                      onPressed: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: const Text("Hapus Obat"),
+                            content: const Text(
+                              "Apakah Anda yakin ingin menghapus obat ini?",
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text("Batal"),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text("Hapus"),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (confirm != true) return;
+
+                        try {
+                          await ref
+                              .read(medicineRepositoryProvider)
+                              .deleteMedicine(widget.medicine.id);
+
+                          ref.invalidate(
+                            medicineProvider(AppConstants.dummyPatientId),
+                          );
+
+                          if (!mounted) return;
+
+                          AppSnackbar.showSuccess(
+                            context,
+                            "Obat berhasil dihapus",
+                          );
+
+                          Navigator.pop(context);
+                        } catch (e) {
+                          AppSnackbar.showError(context, e.toString());
+                        }
+                      },
+
+                      child: const Text("Delete Medicine"),
                     ),
                   ],
                 ),

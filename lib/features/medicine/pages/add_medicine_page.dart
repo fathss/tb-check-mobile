@@ -4,15 +4,20 @@ import 'package:tbcheck_app/core/widgets/primary_button.dart';
 import 'package:tbcheck_app/features/medicine/controllers/medicine_detail_controller.dart';
 import 'package:tbcheck_app/features/medicine/widgets/medicine_input_section.dart';
 import 'package:tbcheck_app/features/medicine/widgets/medicine_day_selector.dart';
+import 'package:tbcheck_app/core/widgets/app_snackbar.dart';
+import 'package:tbcheck_app/features/medicine/models/medicine_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/medicine_provider.dart';
+import 'package:tbcheck_app/core/constants/app_constants.dart';
 
-class AddMedicinePage extends StatefulWidget {
+class AddMedicinePage extends ConsumerStatefulWidget {
   const AddMedicinePage({super.key});
 
   @override
-  State<AddMedicinePage> createState() => _AddMedicinePageState();
+  ConsumerState<AddMedicinePage> createState() => _AddMedicinePageState();
 }
 
-class _AddMedicinePageState extends State<AddMedicinePage> {
+class _AddMedicinePageState extends ConsumerState<AddMedicinePage> {
   final MedicineDetailController controller = MedicineDetailController();
 
   final List<String> dayNames = [
@@ -373,34 +378,8 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
                           children: [
                             Expanded(
                               child: GestureDetector(
-                                onTap: () async {
-                                  final TimeOfDay? pickedTime =
-                                      await showTimePicker(
-                                        context: context,
-                                        initialTime: TimeOfDay.now(),
-                                      );
-
-                                  if (pickedTime != null) {
-                                    final hour = pickedTime.hourOfPeriod
-                                        .toString()
-                                        .padLeft(2, '0');
-
-                                    final minute = pickedTime.minute
-                                        .toString()
-                                        .padLeft(2, '0');
-
-                                    final period =
-                                        pickedTime.period == DayPeriod.am
-                                        ? "AM"
-                                        : "PM";
-
-                                    setState(() {
-                                      controller
-                                              .consumeTimeControllers[index]
-                                              .text =
-                                          "$hour:$minute $period";
-                                    });
-                                  }
+                                onTap: () {
+                                  pickTime(index);
                                 },
 
                                 child: AbsorbPointer(
@@ -495,10 +474,54 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
               PrimaryButton(
                 text: "Save Schedule",
 
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Jadwal berhasil disimpan")),
-                  );
+                onPressed: () async {
+                  try {
+                    final medicine = MedicineModel(
+                      id: '',
+                      patientId: AppConstants.dummyPatientId,
+
+                      name: controller.medicineNameController.text,
+
+                      function: controller.functionController.text,
+
+                      dosage: controller.doseController.text,
+
+                      stock: int.tryParse(controller.stockController.text) ?? 0,
+
+                      schedules: controller.consumeTimeControllers
+                          .map((e) => e.text)
+                          .toList(),
+
+                      consumeCondition: controller.selectedCondition,
+
+                      activeDays: controller.activeDays,
+
+                      selectedImageIndex: controller.selectedImageIndex,
+
+                      isCompleted: false,
+
+                      createdAt: DateTime.now(),
+                    );
+
+                    await ref
+                        .read(medicineRepositoryProvider)
+                        .createMedicine(medicine);
+
+                    if (!mounted) return;
+
+                    AppSnackbar.showSuccess(
+                      context,
+                      "Obat berhasil ditambahkan",
+                    );
+
+                    ref.invalidate(
+                      medicineProvider(AppConstants.dummyPatientId),
+                    );
+
+                    Navigator.pop(context);
+                  } catch (e) {
+                    AppSnackbar.showError(context, e.toString());
+                  }
                 },
               ),
 

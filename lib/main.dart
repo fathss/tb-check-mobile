@@ -10,6 +10,7 @@ import 'package:tbcheck_app/features/auth/data/datasources/auth_storage.dart';
 import 'package:tbcheck_app/core/navigation/main_page.dart';
 import 'package:tbcheck_app/features/landing/landing_page.dart';
 import 'package:tbcheck_app/features/admin_faskes/navigation/admin_main_navigation.dart';
+import 'package:tbcheck_app/features/medicine/pages/test_medicine_page.dart';
 import 'package:tbcheck_app/features/super_admin/presentation/navigation/super_admin_main_page.dart';
 
 import 'package:tbcheck_app/features/admin_faskes/patients/providers/patient_provider.dart';
@@ -52,7 +53,7 @@ class MyApp extends StatelessWidget {
         fontFamily: "PlusJakartaSans",
         colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
       ),
-      home: const AuthGate(),
+      home: const MainPage(),
     );
   }
 }
