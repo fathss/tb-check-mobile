@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:tbcheck_app/features/medicine/medicine_card.dart';
 import 'package:tbcheck_app/features/home/widgets/treatment_progress_card.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:tbcheck_app/features/medicine/pages/medicine_page.dart';
+import 'package:tbcheck_app/features/medicine/pages/schedule_page.dart';
 import '../medicine/providers/medicine_consumption_log_provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../medicine/providers/medicine_provider.dart';
-import '../medicine/pages/medicine_page.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});
@@ -147,7 +146,7 @@ class HomePage extends ConsumerWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const MedicinePage(),
+                                  builder: (_) => const SchedulePage(),
                                 ),
                               );
                             },
