@@ -4,12 +4,20 @@ import 'package:tbcheck_app/core/widgets/primary_button.dart';
 import 'package:tbcheck_app/features/medicine/widgets/medicine_item_card.dart';
 import 'package:tbcheck_app/features/medicine/pages/medicine_detail_page.dart';
 import 'package:tbcheck_app/features/medicine/pages/add_medicine_page.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class MedicineListPage extends StatelessWidget {
+import 'package:tbcheck_app/core/constants/app_constants.dart';
+import '../providers/medicine_provider.dart';
+
+class MedicineListPage extends ConsumerWidget {
   const MedicineListPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final medicinesAsync = ref.watch(
+      medicineProvider(AppConstants.dummyPatientId),
+    );
+
     return Scaffold(
       backgroundColor: Colors.white,
 
@@ -53,107 +61,43 @@ class MedicineListPage extends StatelessWidget {
 
               /// LIST
               Expanded(
-                child: ListView(
-                  children: [
-                    MedicineItemCard(
-                      title: "Pyrazinamide, 500 mg",
+                child: medicinesAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
 
-                      subtitle: "3 pill, once per day",
+                  error: (e, _) => Center(child: Text(e.toString())),
 
-                      schedule: "07:00 am - After Eating",
+                  data: (medicines) {
+                    if (medicines.isEmpty) {
+                      return const Center(child: Text("Belum ada obat"));
+                    }
 
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => MedicineDetailPage(
-                              medicineName: "Pyrazinamide, 500 mg",
-                              function: "Untuk pengobatan TBC",
-                              consumeTimes: ["07:00 AM"],
-                              dose: "3 pill, once per day",
-                              stock: "30",
-                              condition: "Sesudah Makan",
-                              activeDays: const [
-                                true,
-                                false,
-                                true,
-                                false,
-                                true,
-                                false,
-                                false,
-                              ],
-                            ),
-                          ),
+                    return ListView.builder(
+                      itemCount: medicines.length,
+
+                      itemBuilder: (context, index) {
+                        final medicine = medicines[index];
+
+                        return MedicineItemCard(
+                          title: "${medicine.name}, ${medicine.dosage}",
+
+                          subtitle: medicine.function,
+
+                          schedule: medicine.schedules.join(", "),
+
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    MedicineDetailPage(medicine: medicine),
+                              ),
+                            );
+                          },
                         );
                       },
-                    ),
-
-                    MedicineItemCard(
-                      title: "Rifampisin, 450 mg",
-
-                      subtitle: "1 pill, once per day",
-
-                      schedule: "06:00 am - Before Eating",
-
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => MedicineDetailPage(
-                              medicineName: "Rifampisin, 450 mg",
-                              function: "Antibiotik untuk terapi TBC",
-                              consumeTimes: ["06:00 AM"],
-                              dose: "1 pill, once per day",
-                              stock: "20",
-                              condition: "Sebelum Makan",
-                              activeDays: const [
-                                true,
-                                true,
-                                true,
-                                true,
-                                true,
-                                false,
-                                false,
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-
-                    MedicineItemCard(
-                      title: "Isoniazid, 300 mg",
-
-                      subtitle: "1 pill, once per day",
-
-                      schedule: "08:00 am - Before Eating",
-
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => MedicineDetailPage(
-                              medicineName: "Isoniazid, 300 mg",
-                              function: "Membantu membunuh bakteri TBC",
-                              consumeTimes: ["08:00 AM"],
-                              dose: "1 pill, once per day",
-                              stock: "15",
-                              condition: "Sebelum Makan",
-                              activeDays: const [
-                                true,
-                                false,
-                                true,
-                                false,
-                                true,
-                                false,
-                                true,
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ),
 
@@ -164,13 +108,16 @@ class MedicineListPage extends StatelessWidget {
                 child: PrimaryButton(
                   text: "Tambah Obat",
 
-                  onPressed: () {
-                    Navigator.push(
+                  onPressed: () async {
+                    await Navigator.push(
                       context,
-
                       MaterialPageRoute(
                         builder: (_) => const AddMedicinePage(),
                       ),
+                    );
+
+                    ref.invalidate(
+                      medicineProvider(AppConstants.dummyPatientId),
                     );
                   },
                 ),

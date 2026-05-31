@@ -59,14 +59,27 @@ class TreatmentProgressCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(30),
             ),
 
-            child: Text(
-              phase,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
 
-              style: const TextStyle(
-                color: Colors.white,
+              children: [
+                const Icon(
+                  Icons.medication_rounded,
+                  size: 16,
+                  color: Colors.white,
+                ),
 
-                fontWeight: FontWeight.w600,
-              ),
+                const SizedBox(width: 6),
+
+                Text(
+                  phase,
+
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -88,16 +101,30 @@ class TreatmentProgressCard extends StatelessWidget {
           const SizedBox(height: 18),
 
           /// TOTAL DOSE
-          Text(
-            "$currentDose / $totalDose Dosis",
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
 
-            style: const TextStyle(
-              color: Colors.white,
+            children: [
+              Text(
+                "$currentDose / $totalDose Dosis",
 
-              fontSize: 16,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
 
-              fontWeight: FontWeight.bold,
-            ),
+              Text(
+                "${(progress * 100).toInt()}%",
+
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
 
           const SizedBox(height: 14),
@@ -109,7 +136,7 @@ class TreatmentProgressCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
 
-              minHeight: 8,
+              minHeight: 10,
 
               backgroundColor: Colors.white.withOpacity(0.25),
 

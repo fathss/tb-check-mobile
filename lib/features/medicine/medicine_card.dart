@@ -6,6 +6,7 @@ class MedicineCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool isDone;
+  final VoidCallback? onConfirm;
 
   const MedicineCard({
     super.key,
@@ -13,6 +14,7 @@ class MedicineCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.isDone,
+    this.onConfirm,
   });
 
   @override
@@ -69,7 +71,7 @@ class MedicineCard extends StatelessWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                 ),
-                onPressed: () {},
+                onPressed: onConfirm,
                 child: const Text(
                   "Konfirmasi Minum",
                   style: TextStyle(color: AppColors.secondary),
