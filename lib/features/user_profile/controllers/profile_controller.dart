@@ -1,58 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class ProfileController {
-  late TextEditingController nikController;
-
-  late TextEditingController nameController;
-
-  late TextEditingController emailController;
-
-  late TextEditingController passwordController;
-
-  late TextEditingController birthDateController;
+  final nikController = TextEditingController();
+  final nameController = TextEditingController();
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  final birthDateController = TextEditingController();
 
   bool isMale = true;
-
   bool obscurePassword = true;
+  bool isLoading = false; // Tambahkan ini
 
-  void init({
-    required String nik,
-    required String fullName,
-    required String email,
-    required String password,
-    required String birthDate,
-    required bool gender,
-  }) {
-    nikController = TextEditingController(text: nik);
-
-    nameController = TextEditingController(text: fullName);
-
-    emailController = TextEditingController(text: email);
-
-    passwordController = TextEditingController(text: password);
-
-    birthDateController = TextEditingController(text: birthDate);
-
-    isMale = gender;
+  // Fungsi untuk memasukkan data dari API ke controller
+  void populateData(Map<String, dynamic> data) {
+    nikController.text = data['nik'] ?? "";
+    nameController.text = data['fullName'] ?? "";
+    // Email/Password mungkin perlu logika khusus dari API
+    
+    // Format tanggal: "2001-05-15T00:00:00" -> "15/05/2001"
+    if (data['dateOfBirth'] != null) {
+      DateTime dob = DateTime.parse(data['dateOfBirth']);
+      birthDateController.text = DateFormat('dd/MM/yyyy').format(dob);
+    }
+    
+    isMale = data['gender'] == "Laki-Laki" || data['gender'] == true;
   }
 
   void dispose() {
     nikController.dispose();
-
     nameController.dispose();
-
     emailController.dispose();
-
     passwordController.dispose();
-
     birthDateController.dispose();
   }
 
-  void toggleGender(bool value) {
-    isMale = value;
-  }
-
-  void togglePassword() {
-    obscurePassword = !obscurePassword;
-  }
+  void toggleGender(bool value) => isMale = value;
+  void togglePassword() => obscurePassword = !obscurePassword;
 }

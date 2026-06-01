@@ -1,180 +1,138 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart' hide Provider;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:tbcheck_app/core/theme/app_colors.dart';
 import 'package:tbcheck_app/core/widgets/date_helper.dart';
-import 'package:tbcheck_app/features/medicine/data/dummy_medicine_data.dart';
-import 'package:tbcheck_app/features/medicine/models/medicine_model.dart';
-import 'package:tbcheck_app/features/medicine/widgets/medicine_schedule_card.dart';
+import 'package:tbcheck_app/features/medicine/providers/medicine_provider.dart';
+import 'package:tbcheck_app/features/user_profile/presentation/controllers/user_profile_controller.dart';
+// Sesuaikan import auth_storage ini dengan struktur foldermu
+import 'package:tbcheck_app/features/auth/data/datasources/auth_storage.dart'; 
 
-class SchedulePage extends StatefulWidget {
+class SchedulePage extends ConsumerStatefulWidget {
   const SchedulePage({super.key});
 
   @override
-  State<SchedulePage> createState() => _SchedulePageState();
+  ConsumerState<SchedulePage> createState() => _SchedulePageState();
 }
 
-class _SchedulePageState extends State<SchedulePage> {
-  /// USER REGISTER DATE
-  final DateTime userRegisteredAt = DateTime(2026, 5, 17);
-
-  /// SELECTED DATE
+class _SchedulePageState extends ConsumerState<SchedulePage> {
+  final DateTime userRegisteredAt = DateTime(2026, 5, 17); // Bisa dibuat dinamis nanti
   late DateTime selectedDate;
+  String? currentPatientId; // Sekarang kosong, bukan hardcode lagi
+
+  final List<IconData> medicineIcons = [Icons.medication, Icons.medical_information, Icons.receipt_long, Icons.trip_origin];
+  final List<Color> iconBgColors = [const Color(0xFFFFF0D4), const Color(0xFFFFE5F0), const Color(0xFFE0FAFA), const Color(0xFFE8EBFF)];
+  final List<Color> iconColors = [const Color(0xFFFF9800), const Color(0xFFE91E63), const Color(0xFF00BCD4), const Color(0xFF673AB7)];
 
   @override
   void initState() {
     super.initState();
+    selectedDate = DateTime.now();
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initData();
+    });
+  }
 
-    selectedDate = userRegisteredAt;
+  Future<void> _initData() async {
+    final storage = ref.read(authStorageProvider);
+    final userId = await storage.getUserId();
+    
+    if (userId != null) {
+      try {
+        final summary = await ref.read(homeSummaryProvider(userId).future);
+        setState(() {
+          currentPatientId = summary.patientId;
+        });
+        
+        if (currentPatientId != null) {
+          if (!mounted) return;
+          context.read<MedicineProvider>().fetchScheduleByDate(currentPatientId!, selectedDate);
+        }
+      } catch (e) {
+        print("EXCEPTION CALENDAR: $e");
+      }
+    }
+  }
+
+  Map<String, List<dynamic>> _groupSchedulesByTime(List<dynamic> schedules) {
+    Map<String, List<dynamic>> grouped = {};
+    for (var schedule in schedules) {
+      String rawTime = schedule['time'] ?? "00:00";
+      int hour = int.tryParse(rawTime.split(':').first) ?? 0;
+      String period = hour >= 12 ? "PM" : "AM";
+      String timeKey = "$rawTime $period";
+
+      if (!grouped.containsKey(timeKey)) {
+        grouped[timeKey] = [];
+      }
+      grouped[timeKey]!.add(schedule);
+    }
+    return grouped;
   }
 
   @override
   Widget build(BuildContext context) {
-    /// GENERATED DATES
-    final dates = DateHelper.generateDates(
-      startDate: userRegisteredAt,
-      totalDays: 30,
-    );
-
-    /// FILTER MEDICINES BASED ON DATE
-    final filteredMedicines = medicineList.where((medicine) {
-      return !selectedDate.isBefore(medicine.createdAt);
-    }).toList();
-
-    /// GROUP MEDICINES BY SCHEDULE
-    final Map<String, List<MedicineModel>> groupedMedicines = {};
-
-    for (final medicine in filteredMedicines) {
-      for (final schedule in medicine.schedules) {
-        if (!groupedMedicines.containsKey(schedule)) {
-          groupedMedicines[schedule] = [];
-        }
-
-        groupedMedicines[schedule]!.add(medicine);
-      }
-    }
-
-    /// SORT TIME
-    final sortedSchedules = groupedMedicines.keys.toList()
-      ..sort((a, b) => a.compareTo(b));
+    final dates = DateHelper.generateDates(startDate: userRegisteredAt, totalDays: 30);
+    
+    final medicineProvider = context.watch<MedicineProvider>();
+    final schedules = medicineProvider.selectedDateSchedules;
+    final groupedSchedules = _groupSchedulesByTime(schedules);
 
     return Scaffold(
       backgroundColor: Colors.white,
-
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
-
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-
             children: [
               const SizedBox(height: 24),
-
-              /// HEADER
               Row(
                 children: [
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
-
-                    child: const Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      size: 32,
-                    ),
+                    child: const Icon(Icons.arrow_back, size: 28, color: Colors.black87),
                   ),
-
-                  const SizedBox(width: 20),
-
-                  const Text(
-                    "Jadwal Keseluruhan",
-
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
+                  const SizedBox(width: 16),
+                  const Text("Jadwal Keseluruhan", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black87)),
                 ],
               ),
-
               const SizedBox(height: 32),
 
-              /// DATE SELECTOR
               SizedBox(
-                height: 95,
-
+                height: 85,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
-
                   itemCount: dates.length,
-
-                  separatorBuilder: (_, __) => const SizedBox(width: 14),
-
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
                   itemBuilder: (context, index) {
                     final date = dates[index];
-
-                    final isSelected =
-                        selectedDate.day == date.day &&
-                        selectedDate.month == date.month &&
-                        selectedDate.year == date.year;
-
-                    final dayName = [
-                      "Sen",
-                      "Sel",
-                      "Rab",
-                      "Kam",
-                      "Jum",
-                      "Sab",
-                      "Min",
-                    ][date.weekday - 1];
+                    final isSelected = selectedDate.day == date.day && selectedDate.month == date.month && selectedDate.year == date.year;
+                    final dayName = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"][date.weekday - 1];
 
                     return GestureDetector(
                       onTap: () {
-                        setState(() {
-                          selectedDate = date;
-                        });
+                        setState(() { selectedDate = date; });
+                        if (currentPatientId != null) {
+                          context.read<MedicineProvider>().fetchScheduleByDate(currentPatientId!, date);
+                        }
                       },
-
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
-
-                        width: 70,
-
+                        width: 65,
                         decoration: BoxDecoration(
                           color: isSelected ? AppColors.primary : Colors.white,
-
-                          borderRadius: BorderRadius.circular(24),
-
-                          border: Border.all(
-                            color: isSelected
-                                ? AppColors.primary
-                                : AppColors.secondary,
-                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: isSelected ? AppColors.primary : Colors.grey.shade300),
                         ),
-
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
-
                           children: [
-                            Text(
-                              dayName,
-
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-
-                                color: isSelected
-                                    ? Colors.white
-                                    : AppColors.textSecondary,
-                              ),
-                            ),
-
-                            const SizedBox(height: 10),
-
-                            Text(
-                              date.day.toString(),
-
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-
-                                color: isSelected ? Colors.white : Colors.black,
-                              ),
-                            ),
+                            Text(dayName, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isSelected ? Colors.white : Colors.grey.shade500)),
+                            const SizedBox(height: 8),
+                            Text(date.day.toString(), style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : Colors.black87)),
                           ],
                         ),
                       ),
@@ -182,94 +140,93 @@ class _SchedulePageState extends State<SchedulePage> {
                   },
                 ),
               ),
+              const SizedBox(height: 32),
 
-              const SizedBox(height: 36),
-
-              /// CONTENT
               Expanded(
-                child: sortedSchedules.isEmpty
-                    /// EMPTY STATE
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                child: medicineProvider.isCalendarLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : groupedSchedules.isEmpty
+                        ? Center(child: Text("Tidak ada jadwal pada tanggal ini.", style: TextStyle(color: Colors.grey.shade500)))
+                        : ListView.builder(
+                            itemCount: groupedSchedules.keys.length,
+                            itemBuilder: (context, index) {
+                              String timeKey = groupedSchedules.keys.elementAt(index);
+                              List<dynamic> schedulesAtTime = groupedSchedules[timeKey]!;
 
-                          children: [
-                            Icon(
-                              Icons.event_busy_rounded,
-                              size: 90,
-                              color: AppColors.textSecondary.withOpacity(0.4),
-                            ),
-
-                            const SizedBox(height: 20),
-
-                            Text(
-                              "Tidak ada jadwal obat",
-
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-
-                            const SizedBox(height: 8),
-
-                            Text(
-                              "Tidak ada obat yang perlu diminum hari ini",
-
-                              textAlign: TextAlign.center,
-
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    /// LIST
-                    : ListView.builder(
-                        itemCount: sortedSchedules.length,
-
-                        itemBuilder: (context, index) {
-                          final schedule = sortedSchedules[index];
-
-                          final medicines = groupedMedicines[schedule]!;
-
-                          final split = schedule.split(":");
-
-                          final hour = int.parse(split[0]);
-
-                          final minute = split[1];
-
-                          final displayTime = "$hour:$minute";
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-
-                            children: [
-                              /// MEDICINE LIST
-                              ...medicines.map((medicine) {
-                                return MedicineScheduleCard(
-                                  time: displayTime,
-
-                                  medicineName:
-                                      "${medicine.name}, ${medicine.dosage}",
-
-                                  description:
-                                      "1 Tablet - ${medicine.consumeCondition.toLowerCase()}",
-
-                                  initialDone: medicine.isCompleted,
-                                );
-                              }),
-
-                              const SizedBox(height: 5),
-                            ],
-                          );
-                        },
-                      ),
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(timeKey, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)),
+                                  const SizedBox(height: 8),
+                                  Divider(color: Colors.grey.shade200, thickness: 1),
+                                  const SizedBox(height: 16),
+                                  ...schedulesAtTime.map((schedule) {
+                                    return _buildGroupedScheduleCard(schedule);
+                                  }),
+                                  const SizedBox(height: 16),
+                                ],
+                              );
+                            },
+                          ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGroupedScheduleCard(dynamic data) {
+    bool isDone = data["isDone"] ?? false;
+    int imgIndex = data["imageIndex"] ?? 0;
+    String scheduleId = data["scheduleId"] ?? ""; 
+
+    if (imgIndex < 0 || imgIndex >= medicineIcons.length) imgIndex = 0;
+
+    return GestureDetector(
+      onTap: () async {
+        if (isDone || currentPatientId == null) return; 
+        
+        final success = await context.read<MedicineProvider>().confirmConsume(scheduleId, currentPatientId!);
+        
+        if (success) {
+           if (!mounted) return;
+           context.read<MedicineProvider>().fetchScheduleByDate(currentPatientId!, selectedDate);
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDone ? const Color(0xFFF2FFF4) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: isDone ? Colors.green.shade300 : Colors.transparent),
+          boxShadow: isDone ? [] : [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 4))],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(color: iconBgColors[imgIndex], borderRadius: BorderRadius.circular(12)),
+              child: Icon(medicineIcons[imgIndex], color: iconColors[imgIndex], size: 26),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    data["title"] ?? "",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87, decoration: isDone ? TextDecoration.lineThrough : TextDecoration.none),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(data["subtitle"] ?? "", style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+                ],
+              ),
+            ),
+            Icon(isDone ? Icons.check_circle : Icons.radio_button_unchecked, color: isDone ? Colors.green : Colors.grey.shade400, size: 28),
+          ],
         ),
       ),
     );

@@ -15,6 +15,7 @@ import 'package:tbcheck_app/features/super_admin/presentation/navigation/super_a
 import 'package:tbcheck_app/features/admin_faskes/patients/providers/patient_provider.dart';
 import 'package:tbcheck_app/features/admin_faskes/dashboard/providers/dashboard_provider.dart';
 import 'package:tbcheck_app/features/admin_faskes/profile/providers/faskes_profile_provider.dart';
+import 'package:tbcheck_app/features/medicine/providers/medicine_provider.dart';
 
 Future<void> main() async {
   // 1. Load Environment Variables
@@ -33,8 +34,9 @@ Future<void> main() async {
           ChangeNotifierProvider(create: (_) => PatientProvider()),
           ChangeNotifierProvider(create: (_) => DashboardProvider()),
           ChangeNotifierProvider(create: (_) => FaskesProfileProvider()),
+          ChangeNotifierProvider(create: (_) => MedicineProvider()),
         ],
-        child: MyApp(),
+        child: const MyApp(),
       ),
     ),
   );
@@ -46,12 +48,17 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'TBCare Admin',
+      title: 'TBCare',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         fontFamily: "PlusJakartaSans",
         colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
       ),
+      // --- PENAMBAHAN ROUTES UNTUK LOGOUT ---
+      routes: {
+        '/login': (context) => const LandingPage(),
+      },
+      // --------------------------------------
       home: const AuthGate(),
     );
   }

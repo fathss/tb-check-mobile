@@ -1,10 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/repositories/user_profile_repository.dart';
+import '../../models/home_summary_model.dart';
 
 final userProfileControllerProvider = Provider<UserProfileController>((ref) {
   final repository = ref.watch(userProfileRepositoryProvider);
   return UserProfileController(repository);
+});
+
+final homeSummaryProvider = FutureProvider.family<HomeSummaryModel, String>((ref, userId) async {
+  final repository = ref.watch(userProfileRepositoryProvider);
+  return repository.getHomeSummary(userId);
 });
 
 class UserProfileController {

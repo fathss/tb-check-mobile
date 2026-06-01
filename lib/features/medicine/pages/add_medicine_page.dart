@@ -1,157 +1,115 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:provider/provider.dart' hide Provider; 
 import 'package:tbcheck_app/core/theme/app_colors.dart';
 import 'package:tbcheck_app/core/widgets/primary_button.dart';
 import 'package:tbcheck_app/features/medicine/controllers/medicine_detail_controller.dart';
 import 'package:tbcheck_app/features/medicine/widgets/medicine_input_section.dart';
 import 'package:tbcheck_app/features/medicine/widgets/medicine_day_selector.dart';
+import 'package:tbcheck_app/features/medicine/providers/medicine_provider.dart';
+import 'package:tbcheck_app/features/user_profile/presentation/controllers/user_profile_controller.dart';
+// Import Auth Storage untuk mengambil ID dinamis
+import 'package:tbcheck_app/features/auth/data/datasources/auth_storage.dart';
 
-class AddMedicinePage extends StatefulWidget {
+class AddMedicinePage extends ConsumerStatefulWidget {
   const AddMedicinePage({super.key});
 
   @override
-  State<AddMedicinePage> createState() => _AddMedicinePageState();
+  ConsumerState<AddMedicinePage> createState() => _AddMedicinePageState();
 }
 
-class _AddMedicinePageState extends State<AddMedicinePage> {
+class _AddMedicinePageState extends ConsumerState<AddMedicinePage> {
   final MedicineDetailController controller = MedicineDetailController();
+  
+  // State untuk melacak proses loading saat tombol Save ditekan
+  bool _isSaving = false;
 
-  final List<String> dayNames = [
-    "Sen",
-    "Sel",
-    "Rab",
-    "Kam",
-    "Jum",
-    "Sab",
-    "Min",
-  ];
+  final List<String> dayNames = ["Senin", "Selasa", "Rabu", "Kamis", "Jum'at", "Sabtu", "Minggu"];
 
   final List<IconData> medicineIcons = [
     Icons.medication,
-    Icons.medical_services,
+    Icons.medical_information,
     Icons.receipt_long,
-    Icons.circle,
+    Icons.trip_origin,
   ];
 
   final List<Color> iconBgColors = [
-    const Color(0xFFFFE8CC),
-    const Color(0xFFFFD6EC),
-    const Color(0xFFD7F5FF),
-    const Color(0xFFDCE2FF),
+    const Color(0xFFFFF0D4),
+    const Color(0xFFFFE5F0),
+    const Color(0xFFE0FAFA),
+    const Color(0xFFE8EBFF),
   ];
 
   final List<Color> iconColors = [
-    Colors.orange,
-    Colors.pink,
-    Colors.cyan,
-    Colors.indigo,
+    const Color(0xFFFF9800),
+    const Color(0xFFE91E63),
+    const Color(0xFF00BCD4),
+    const Color(0xFF673AB7),
   ];
 
   @override
   void initState() {
     super.initState();
-
     controller.init(
       medicineName: "",
       function: "",
       dose: "",
       stock: "",
       condition: "Sebelum Makan",
-
       days: [true, false, false, true, false, false, false],
-
-      consumeTimes: ["06:00"],
+      consumeTimes: ["06:00 AM"], 
     );
   }
 
   @override
   void dispose() {
     controller.dispose();
-
     super.dispose();
-  }
-
-  Future<void> pickTime(int index) async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-    );
-
-    if (picked != null) {
-      final hour = picked.hour.toString().padLeft(2, '0');
-
-      final minute = picked.minute.toString().padLeft(2, '0');
-
-      setState(() {
-        controller.consumeTimeControllers[index].text = "$hour:$minute";
-      });
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
-      resizeToAvoidBottomInset: true,
-
+      resizeToAvoidBottomInset: true, 
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-
             children: [
-              const SizedBox(height: 24),
-
               /// HEADER
               Row(
                 children: [
                   GestureDetector(
-                    onTap: () {
-                      Navigator.pop(context);
-                    },
-
-                    child: const Icon(
-                      Icons.arrow_back_ios_new_rounded,
-
-                      size: 32,
-                    ),
+                    onTap: () => Navigator.pop(context),
+                    child: const Icon(Icons.arrow_back, size: 24, color: Colors.black87), 
                   ),
-
-                  const SizedBox(width: 20),
-
+                  const SizedBox(width: 12),
                   const Text(
-                    "Tambah obat",
-
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    "Create New Medicine",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 48),
+              const SizedBox(height: 20),
 
               /// NAME
               MedicineInputSection(
-                title: "Nama Obat",
-
+                title: "Medicine Name",
                 controller: controller.medicineNameController,
-
                 isBold: true,
               ),
-
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
               /// FUNCTION
               MedicineInputSection(
-                title: "Fungsi",
-
+                title: "Tujuan / Fungsi Obat",
                 controller: controller.functionController,
-
                 isBold: true,
               ),
-
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
               /// DOSAGE & STOCK
               Row(
@@ -159,350 +117,237 @@ class _AddMedicinePageState extends State<AddMedicinePage> {
                   Expanded(
                     child: MedicineInputSection(
                       title: "Dosis (pil)",
-
                       controller: controller.doseController,
                     ),
                   ),
-
-                  const SizedBox(width: 20),
-
+                  const SizedBox(width: 16),
                   Expanded(
                     child: MedicineInputSection(
-                      title: "Stok Obat",
-
+                      title: "Stok Total",
                       controller: controller.stockController,
                     ),
                   ),
                 ],
               ),
+              const SizedBox(height: 16), 
 
-              const SizedBox(height: 20),
-
-              /// IMAGE
-              const Text(
-                "Display Image",
-
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              Row(
+              /// DISPLAY IMAGE
+              const Text("Display Image", style: TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8), 
+              Wrap(
+                spacing: 12, 
                 children: List.generate(medicineIcons.length, (index) {
                   final isSelected = controller.selectedImageIndex == index;
-
                   return GestureDetector(
                     onTap: () {
                       setState(() {
                         controller.changeImage(index);
                       });
                     },
-
                     child: Container(
-                      width: 70,
-                      height: 70,
-
-                      margin: const EdgeInsets.only(right: 16),
-
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
                         color: iconBgColors[index],
-
-                        borderRadius: BorderRadius.circular(20),
-
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: isSelected
-                              ? AppColors.primary
-                              : Colors.transparent,
-
-                          width: 1,
+                          color: isSelected ? iconColors[index] : Colors.transparent,
+                          width: 2,
                         ),
                       ),
-
-                      child: Icon(
-                        medicineIcons[index],
-
-                        color: iconColors[index],
-
-                        size: 20,
-                      ),
+                      child: Icon(medicineIcons[index], color: iconColors[index], size: 20),
                     ),
                   );
                 }),
               ),
-
-              const SizedBox(height: 40),
+              const SizedBox(height: 16),
 
               /// CONDITION
-              const Text(
-                "Kondisi Minum",
-
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              Row(
+              const Text("Kondisi Minum", style: TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
                 children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          controller.changeCondition("Sebelum Makan");
-                        });
-                      },
-
-                      child: Container(
-                        height: 58,
-
-                        decoration: BoxDecoration(
-                          color: controller.selectedCondition == "Sebelum Makan"
-                              ? AppColors.primary
-                              : AppColors.secondary,
-
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-
-                        child: Center(
-                          child: Text(
-                            "Sebelum Makan",
-
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-
-                              color:
-                                  controller.selectedCondition ==
-                                      "Sebelum Makan"
-                                  ? Colors.white
-                                  : AppColors.textSecondary,
-                            ),
-                          ),
+                  GestureDetector(
+                    onTap: () { setState(() { controller.changeCondition("Sebelum Makan"); }); },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: controller.selectedCondition == "Sebelum Makan" ? AppColors.primary : AppColors.secondary,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        "Sebelum Makan",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: controller.selectedCondition == "Sebelum Makan" ? Colors.white : AppColors.primary,
                         ),
                       ),
                     ),
                   ),
-
-                  const SizedBox(width: 12),
-
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          controller.changeCondition("Setelah Makan");
-                        });
-                      },
-
-                      child: Container(
-                        height: 58,
-
-                        decoration: BoxDecoration(
-                          color: controller.selectedCondition == "Setelah Makan"
-                              ? AppColors.primary
-                              : AppColors.secondary,
-
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-
-                        child: Center(
-                          child: Text(
-                            "Setelah Makan",
-
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-
-                              color:
-                                  controller.selectedCondition ==
-                                      "Setelah Makan"
-                                  ? Colors.white
-                                  : AppColors.textSecondary,
-                            ),
-                          ),
+                  GestureDetector(
+                    onTap: () { setState(() { controller.changeCondition("Setelah Makan"); }); },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: controller.selectedCondition == "Setelah Makan" ? AppColors.primary : AppColors.secondary,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(
+                        "Setelah Makan",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: controller.selectedCondition == "Setelah Makan" ? Colors.white : AppColors.primary,
                         ),
                       ),
                     ),
                   ),
                 ],
               ),
-
-              const SizedBox(height: 40),
-
-              Text(
-                "Waktu Minum",
-
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              Column(
-                children: List.generate(
-                  controller.consumeTimeControllers.length,
-                  (index) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 28,
-                          vertical: 14,
-                        ),
-
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              AppColors.primary,
-                              Color.fromRGBO(79, 141, 253, 1),
-                            ],
-                          ),
-
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () async {
-                                  final TimeOfDay? pickedTime =
-                                      await showTimePicker(
-                                        context: context,
-                                        initialTime: TimeOfDay.now(),
-                                      );
-
-                                  if (pickedTime != null) {
-                                    final hour = pickedTime.hourOfPeriod
-                                        .toString()
-                                        .padLeft(2, '0');
-
-                                    final minute = pickedTime.minute
-                                        .toString()
-                                        .padLeft(2, '0');
-
-                                    final period =
-                                        pickedTime.period == DayPeriod.am
-                                        ? "AM"
-                                        : "PM";
-
-                                    setState(() {
-                                      controller
-                                              .consumeTimeControllers[index]
-                                              .text =
-                                          "$hour:$minute $period";
-                                    });
-                                  }
-                                },
-
-                                child: AbsorbPointer(
-                                  child: TextField(
-                                    controller: controller
-                                        .consumeTimeControllers[index],
-
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-
-                                    decoration: const InputDecoration(
-                                      border: InputBorder.none,
-                                      isDense: true,
-                                      contentPadding: EdgeInsets.zero,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            if (controller.consumeTimeControllers.length > 1)
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    controller.removeConsumeTime(index);
-                                  });
-                                },
-
-                                child: const Icon(
-                                  Icons.close,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    controller.addConsumeTime();
-                  });
-                },
-
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.add_circle_outline,
-                      color: AppColors.primary,
-                      size: 18,
-                    ),
-
-                    const SizedBox(width: 6),
-
-                    Text(
-                      "Tambah Jadwal",
-
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
               const SizedBox(height: 16),
 
-              /// DAYS
+              /// WAKTU MINUM
+              const Text("Waktu Minum", style: TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ...List.generate(
+                    controller.consumeTimeControllers.length,
+                    (index) {
+                      return GestureDetector(
+                        onTap: () async {
+                          final TimeOfDay? pickedTime = await showTimePicker(
+                            context: context,
+                            initialTime: TimeOfDay.now(),
+                          );
+                          if (pickedTime != null) {
+                            final hour = pickedTime.hourOfPeriod.toString().padLeft(2, '0');
+                            final minute = pickedTime.minute.toString().padLeft(2, '0');
+                            final period = pickedTime.period == DayPeriod.am ? "AM" : "PM";
+                            setState(() {
+                              controller.consumeTimeControllers[index].text = "$hour:$minute $period";
+                            });
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(16)),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                controller.consumeTimeControllers[index].text,
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                              ),
+                              if (controller.consumeTimeControllers.length > 1) ...[
+                                const SizedBox(width: 6),
+                                GestureDetector(
+                                  onTap: () { setState(() { controller.removeConsumeTime(index); }); },
+                                  child: const Icon(Icons.close, color: Colors.white, size: 14),
+                                ),
+                              ]
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  GestureDetector(
+                    onTap: () { setState(() { controller.addConsumeTime(); }); },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(color: const Color(0xFFF4F6F9), borderRadius: BorderRadius.circular(16)),
+                      child: const Text("Tambah +", style: TextStyle(color: Colors.blueGrey, fontWeight: FontWeight.bold, fontSize: 12)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              /// HARI PER MINGGU
+              const Text("Hari per Minggu", style: TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
               MedicineDaySelector(
                 activeDays: controller.activeDays,
-
-                onToggle: (index) {
-                  setState(() {
-                    controller.toggleDay(index);
-                  });
-                },
+                onToggle: (index) { setState(() { controller.toggleDay(index); }); },
               ),
+              const SizedBox(height: 24),
 
-              const SizedBox(height: 40),
+              /// BUTTON SAVE
+              _isSaving 
+                ? const Center(child: CircularProgressIndicator()) 
+                : PrimaryButton(
+                    text: "Save Schedule",
+                    onPressed: () async {
+                      // 1. Ubah UI ke state Loading
+                      setState(() {
+                        _isSaving = true;
+                      });
 
-              /// BUTTON
-              PrimaryButton(
-                text: "Save Schedule",
+                      try {
+                        // 2. Ambil User ID Dinamis dari Storage
+                        final storage = ref.read(authStorageProvider);
+                        final userId = await storage.getUserId();
 
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Jadwal berhasil disimpan")),
-                  );
-                },
-              ),
+                        if (userId == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Sesi tidak ditemukan. Silakan login kembali."), backgroundColor: Colors.red));
+                          return;
+                        }
 
-              const SizedBox(height: 32),
+                        // 3. Ambil Patient ID dari Profil
+                        final summary = await ref.read(homeSummaryProvider(userId).future);
+                        final patientId = summary.patientId;
+                        
+                        if (patientId == null) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Profil Medis belum terdaftar."), backgroundColor: Colors.red));
+                          return;
+                        }
+
+                        // 4. Bersihkan Format Jam
+                        List<String> cleanTimes = controller.consumeTimeControllers.map((c) {
+                          return c.text.replaceAll(" AM", "").replaceAll(" PM", "").trim();
+                        }).toList();
+
+                        // 5. Kirim data ke API C#
+                        bool success = await context.read<MedicineProvider>().addMedicine(
+                          patientId: patientId, // <-- SEKARANG SUDAH DINAMIS!
+                          name: controller.medicineNameController.text,
+                          function: controller.functionController.text,
+                          dosage: controller.doseController.text,
+                          stock: int.tryParse(controller.stockController.text) ?? 0,
+                          imageIndex: controller.selectedImageIndex,
+                          condition: controller.selectedCondition,
+                          activeDays: controller.activeDays,
+                          consumeTimes: cleanTimes,
+                        );
+
+                        if (!context.mounted) return;
+                        
+                        // 6. Tangani Hasil (Sukses / Gagal)
+                        if (success) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Jadwal obat berhasil ditambahkan!"), backgroundColor: Colors.green));
+                          Navigator.pop(context); 
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Gagal menyimpan obat. Periksa koneksi Anda."), backgroundColor: Colors.red));
+                        }
+                      } catch (e) {
+                         if (context.mounted) {
+                           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Terjadi kesalahan sistem: $e"), backgroundColor: Colors.red));
+                         }
+                      } finally {
+                        // 7. Kembalikan UI dari state Loading
+                        if (mounted) {
+                          setState(() {
+                            _isSaving = false;
+                          });
+                        }
+                      }
+                    },
+                  ),
             ],
           ),
         ),

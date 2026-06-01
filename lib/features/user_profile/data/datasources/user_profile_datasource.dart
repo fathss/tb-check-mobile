@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:tbcheck_app/core/network/api_client.dart';
+import 'package:tbcheck_app/features/user_profile/models/home_summary_model.dart';
 
 final userProfileDatasourceProvider = Provider<UserProfileDatasource>((ref) {
   final apiClient = ref.watch(apiClientProvider);
@@ -51,6 +52,17 @@ class UserProfileDatasource {
       throw Exception(_extractErrorMessage(e, 'Gagal melengkapi profil'));
     } catch (e) {
       throw Exception('Terjadi kesalahan sistem saat melengkapi profil');
+    }
+  }
+
+  Future<HomeSummaryModel> getHomeSummary(String userId) async {
+    try {
+      final response = await _apiClient.dio.get('/profile/$userId/home-summary');
+      return HomeSummaryModel.fromJson(response.data);
+    } on DioException catch (e) {
+      throw Exception(_extractErrorMessage(e, 'Gagal mengambil data beranda'));
+    } catch (e) {
+      throw Exception('Terjadi kesalahan sistem saat memuat beranda');
     }
   }
 
