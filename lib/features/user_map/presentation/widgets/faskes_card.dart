@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tbcheck_app/core/theme/app_colors.dart';
-import 'package:tbcheck_app/features/user_map/models/faskes_model.dart';
+import 'package:tbcheck_app/features/user_map/data/models/faskes_model.dart';
 
 class FaskesCard extends StatelessWidget {
   final Faskes faskes;

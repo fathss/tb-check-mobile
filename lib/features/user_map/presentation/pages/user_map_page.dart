@@ -1,36 +1,37 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
 import 'package:tbcheck_app/core/constants/app_constants.dart';
 import 'package:tbcheck_app/core/widgets/custom_search_field.dart';
-import 'package:tbcheck_app/features/user_map/models/faskes_model.dart';
-import 'package:tbcheck_app/features/user_map/widgets/filter_chip.dart';
-import 'package:tbcheck_app/features/user_map/widgets/faskes_list_bottom_sheet.dart';
+import 'package:tbcheck_app/features/user_map/data/models/faskes_model.dart';
+import 'package:tbcheck_app/features/user_map/presentation/controllers/user_map_controller.dart';
+import 'package:tbcheck_app/features/user_map/presentation/widgets/faskes_list_bottom_sheet.dart';
+import 'package:tbcheck_app/features/user_map/presentation/widgets/filter_chip.dart';
 
-class UserMapPage extends StatefulWidget {
+class UserMapPage extends ConsumerStatefulWidget {
   const UserMapPage({super.key});
 
   @override
-  State<UserMapPage> createState() => _UserMapPageState();
+  ConsumerState<UserMapPage> createState() => _UserMapPageState();
 }
 
-class _UserMapPageState extends State<UserMapPage> {
+class _UserMapPageState extends ConsumerState<UserMapPage> {
   Position? _currentPosition;
   GoogleMapController? _mapController;
-  Set<Marker> _markers = {};
   Set<Polyline> _polylines = {};
-  List<FaskesWithDistance> _faskesWithDistance = [];
   final TextEditingController _searchController = TextEditingController();
   final int maxFaskesReachRadius = 10000;
 
   String _selectedTipe = 'Semua';
   final List<String> _tipeOptions = ['Semua', 'Puskesmas', 'Rumah Sakit'];
 
-  String googleApiKey = AppConstants.googleMapsKey;
+  final String googleApiKey = AppConstants.googleMapsKey;
 
-  /// Key to access FaskesListBottomSheet state
   late GlobalKey<State<FaskesListBottomSheet>> _faskesSheetKey;
 
   @override
@@ -52,18 +53,13 @@ class _UserMapPageState extends State<UserMapPage> {
       permission = await Geolocator.requestPermission();
     }
 
-    Position position = await Geolocator.getCurrentPosition();
+    final position = await Geolocator.getCurrentPosition();
 
     if (!mounted) return;
 
     setState(() {
       _currentPosition = position;
-      _loadMarkers();
     });
-  }
-
-  void _loadMarkers() {
-    _applySearch('');
   }
 
   Future<void> _focusOnFaskes(Faskes faskes) async {
@@ -78,58 +74,76 @@ class _UserMapPageState extends State<UserMapPage> {
     }
   }
 
-  void _applySearch(String query) {
-    if (_currentPosition == null) return;
+  List<Faskes> _filterFaskes(List<Faskes> allFaskes) {
+    if (_currentPosition == null) {
+      return const [];
+    }
 
-    final q = query.trim().toLowerCase();
+    final query = _searchController.text.trim().toLowerCase();
 
-    _markers.clear();
-    _faskesWithDistance.clear();
-
-    for (var faskes in daftarFaskesMockup) {
-      // Filter by tipe
-      if (_selectedTipe != 'Semua' && faskes.tipe != _selectedTipe) continue;
-
-      // Filter by query
-      if (q.isNotEmpty) {
-        final name = faskes.nama.toLowerCase();
-        final lokasi = faskes.lokasi.toLowerCase();
-        if (!name.contains(q) && !lokasi.contains(q)) continue;
+    return allFaskes.where((faskes) {
+      if (_selectedTipe != 'Semua' && faskes.tipe != _selectedTipe) {
+        return false;
       }
 
-      double distance = Geolocator.distanceBetween(
+      if (query.isNotEmpty) {
+        final name = faskes.nama.toLowerCase();
+        final lokasi = faskes.lokasi.toLowerCase();
+        if (!name.contains(query) && !lokasi.contains(query)) {
+          return false;
+        }
+      }
+
+      final distance = Geolocator.distanceBetween(
         _currentPosition!.latitude,
         _currentPosition!.longitude,
         faskes.posisi.latitude,
         faskes.posisi.longitude,
       );
 
-      if (distance <= maxFaskesReachRadius) {
-        _markers.add(
-          Marker(
-            markerId: MarkerId(faskes.nama),
-            position: faskes.posisi,
-            infoWindow: InfoWindow(title: faskes.nama),
+      return distance <= maxFaskesReachRadius;
+    }).toList();
+  }
+
+  List<FaskesWithDistance> _buildFaskesWithDistance(List<Faskes> faskesList) {
+    if (_currentPosition == null) {
+      return const [];
+    }
+
+    final list = faskesList
+        .map(
+          (faskes) => FaskesWithDistance(
+            faskes: faskes,
+            distance: Geolocator.distanceBetween(
+              _currentPosition!.latitude,
+              _currentPosition!.longitude,
+              faskes.posisi.latitude,
+              faskes.posisi.longitude,
+            ),
+          ),
+        )
+        .toList();
+
+    list.sort((a, b) => a.distance.compareTo(b.distance));
+    return list;
+  }
+
+  Set<Marker> _buildMarkers(List<FaskesWithDistance> faskesWithDistance) {
+    return faskesWithDistance
+        .map(
+          (entry) => Marker(
+            markerId: MarkerId(entry.faskes.id),
+            position: entry.faskes.posisi,
+            infoWindow: InfoWindow(title: entry.faskes.nama),
             onTap: () async {
-              // Show the detail bottom sheet for this faskes
               final state = _faskesSheetKey.currentState;
               if (state != null) {
-                // Call selectFaskes using dynamic dispatch
-                (state as dynamic).selectFaskes(faskes);
+                (state as dynamic).selectFaskes(entry.faskes);
               }
             },
           ),
-        );
-
-        _faskesWithDistance.add(
-          FaskesWithDistance(faskes: faskes, distance: distance),
-        );
-      }
-    }
-
-    _faskesWithDistance.sort((a, b) => a.distance.compareTo(b.distance));
-
-    setState(() {});
+        )
+        .toSet();
   }
 
   void _clearPolylines() {
@@ -139,9 +153,9 @@ class _UserMapPageState extends State<UserMapPage> {
   }
 
   Future<void> getPolylines(LatLng destination) async {
-    PolylinePoints polylinePoints = PolylinePoints(apiKey: googleApiKey);
+    final polylinePoints = PolylinePoints(apiKey: googleApiKey);
 
-    PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+    final result = await polylinePoints.getRouteBetweenCoordinates(
       request: PolylineRequest(
         origin: PointLatLng(
           _currentPosition!.latitude,
@@ -153,9 +167,9 @@ class _UserMapPageState extends State<UserMapPage> {
     );
 
     if (result.points.isNotEmpty) {
-      List<LatLng> polylineCoordinates = [];
+      final polylineCoordinates = <LatLng>[];
 
-      for (var point in result.points) {
+      for (final point in result.points) {
         polylineCoordinates.add(LatLng(point.latitude, point.longitude));
       }
 
@@ -163,7 +177,7 @@ class _UserMapPageState extends State<UserMapPage> {
         _polylines.clear();
         _polylines.add(
           Polyline(
-            polylineId: const PolylineId("asli_rute"),
+            polylineId: const PolylineId('asli_rute'),
             color: Colors.blue,
             points: polylineCoordinates,
             width: 5,
@@ -171,14 +185,13 @@ class _UserMapPageState extends State<UserMapPage> {
         );
       });
 
-      // Animate camera to show both markers
       if (_mapController != null) {
-        LatLng userPos = LatLng(
+        final userPos = LatLng(
           _currentPosition!.latitude,
           _currentPosition!.longitude,
         );
 
-        LatLngBounds bounds = LatLngBounds(
+        final bounds = LatLngBounds(
           southwest: LatLng(
             math.min(userPos.latitude, destination.latitude),
             math.min(userPos.longitude, destination.longitude),
@@ -194,18 +207,26 @@ class _UserMapPageState extends State<UserMapPage> {
         );
       }
     } else {
-      print("Gagal mengambil rute: ${result.errorMessage}");
+      // ignore: avoid_print
+      print('Gagal mengambil rute: ${result.errorMessage}');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final faskesAsync = ref.watch(userMapProvider);
+    final allFaskes = faskesAsync.hasValue
+        ? faskesAsync.value!
+        : const <Faskes>[];
+    final filteredFaskes = _filterFaskes(allFaskes);
+    final faskesWithDistance = _buildFaskesWithDistance(filteredFaskes);
+    final markers = _buildMarkers(faskesWithDistance);
+
     return Scaffold(
       body: _currentPosition == null
           ? const Center(child: CircularProgressIndicator())
           : Stack(
               children: [
-                // Google Map
                 GoogleMap(
                   initialCameraPosition: CameraPosition(
                     target: LatLng(
@@ -214,9 +235,9 @@ class _UserMapPageState extends State<UserMapPage> {
                     ),
                     zoom: 15,
                   ),
-                  markers: _markers,
+                  markers: markers,
                   polylines: _polylines,
-                  onTap: (LatLng pos) {
+                  onTap: (_) {
                     setState(() {
                       _polylines.clear();
                     });
@@ -229,8 +250,6 @@ class _UserMapPageState extends State<UserMapPage> {
                   myLocationEnabled: true,
                   myLocationButtonEnabled: false,
                 ),
-
-                // Current position button
                 Positioned(
                   right: 8.0,
                   bottom: 100.0,
@@ -243,8 +262,9 @@ class _UserMapPageState extends State<UserMapPage> {
                       borderRadius: BorderRadius.circular(12.0),
                     ),
                     onPressed: () async {
-                      if (_currentPosition == null || _mapController == null)
+                      if (_currentPosition == null || _mapController == null) {
                         return;
+                      }
                       final target = LatLng(
                         _currentPosition!.latitude,
                         _currentPosition!.longitude,
@@ -258,8 +278,6 @@ class _UserMapPageState extends State<UserMapPage> {
                     child: const Icon(Icons.my_location, color: Colors.black),
                   ),
                 ),
-
-                // Search Bar + Filter Chips Overlay
                 Positioned(
                   top: 40.0,
                   left: 0,
@@ -272,7 +290,7 @@ class _UserMapPageState extends State<UserMapPage> {
                         child: CustomSearchField(
                           controller: _searchController,
                           hintText: 'Cari Puskesmas atau RSUD...',
-                          onChanged: (value) => _applySearch(value),
+                          onChanged: (_) => setState(() {}),
                         ),
                       ),
                       const SizedBox(height: 10.0),
@@ -283,19 +301,85 @@ class _UserMapPageState extends State<UserMapPage> {
                           setState(() {
                             _selectedTipe = tipe;
                           });
-                          _applySearch(_searchController.text);
                         },
                       ),
                     ],
                   ),
                 ),
-
+                if (faskesAsync.isLoading)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Container(
+                        color: Colors.black.withOpacity(0.04),
+                        alignment: Alignment.center,
+                        child: const SizedBox(
+                          width: 28,
+                          height: 28,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        ),
+                      ),
+                    ),
+                  ),
+                if (faskesAsync.hasError)
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    bottom: 140,
+                    child: Material(
+                      color: Colors.white,
+                      elevation: 3,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Gagal memuat faskes',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              faskesAsync.error.toString().replaceFirst(
+                                'Exception: ',
+                                '',
+                              ),
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: () =>
+                                    ref.invalidate(userMapProvider),
+                                child: const Text('Coba lagi'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 FaskesListBottomSheet(
                   key: _faskesSheetKey,
-                  faskesWithDistance: _faskesWithDistance,
+                  faskesWithDistance: faskesWithDistance,
                   onFaskesTap: (faskes) => _focusOnFaskes(faskes),
                   onRouteRequested: (faskes) => getPolylines(faskes.posisi),
                   onClose: _clearPolylines,
+                  isLoading: faskesAsync.isLoading && allFaskes.isEmpty,
+                  errorMessage: faskesAsync.hasError && allFaskes.isEmpty
+                      ? faskesAsync.error.toString().replaceFirst(
+                          'Exception: ',
+                          '',
+                        )
+                      : null,
                 ),
               ],
             ),

@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:tbcheck_app/core/theme/app_colors.dart';
-import 'package:tbcheck_app/features/user_map/models/faskes_model.dart';
-import 'package:tbcheck_app/features/user_map/widgets/faskes_card.dart';
-import 'package:tbcheck_app/features/user_map/widgets/faskes_detail_bottom_sheet.dart';
+import 'package:tbcheck_app/features/user_map/data/models/faskes_model.dart';
+import 'package:tbcheck_app/features/user_map/presentation/widgets/faskes_card.dart';
+import 'package:tbcheck_app/features/user_map/presentation/widgets/faskes_detail_bottom_sheet.dart';
 
 class FaskesListBottomSheet extends StatefulWidget {
   final List<FaskesWithDistance> faskesWithDistance;
   final Future<void> Function(Faskes faskes) onFaskesTap;
   final Future<void> Function(Faskes faskes) onRouteRequested;
   final VoidCallback onClose;
+  final bool isLoading;
+  final String? errorMessage;
 
   const FaskesListBottomSheet({
     super.key,
@@ -16,6 +18,8 @@ class FaskesListBottomSheet extends StatefulWidget {
     required this.onFaskesTap,
     required this.onRouteRequested,
     required this.onClose,
+    this.isLoading = false,
+    this.errorMessage,
   });
 
   @override
@@ -68,7 +72,7 @@ class _FaskesListBottomSheetState extends State<FaskesListBottomSheet> {
     // Find the distance for this faskes
     double? distance;
     for (var item in widget.faskesWithDistance) {
-      if (item.faskes.nama == faskes.nama) {
+      if (item.faskes.id == faskes.id) {
         distance = item.distance;
         break;
       }
@@ -98,9 +102,7 @@ class _FaskesListBottomSheetState extends State<FaskesListBottomSheet> {
         distance:
             'Berjarak ${_formatDistance(_selectedDistance!)} dari lokasimu',
         openingHours: _selectedFaskes!.status,
-        isOpen:
-            _selectedFaskes!.status == '24 Jam' ||
-            _selectedFaskes!.status == 'Buka',
+        isOpen: _selectedFaskes!.isOpen,
         initialSize: _detailInitialSize,
         onRoutePressed: () => widget.onRouteRequested(_selectedFaskes!),
         onPhonePressed: () {},
@@ -132,7 +134,46 @@ class _FaskesListBottomSheetState extends State<FaskesListBottomSheet> {
               ),
             ],
           ),
-          child: widget.faskesWithDistance.isEmpty
+          child: widget.isLoading
+              ? SingleChildScrollView(
+                  controller: scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.9,
+                    child: const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16.0),
+                          Text('Memuat faskes...'),
+                        ],
+                      ),
+                    ),
+                  ),
+                )
+              : widget.errorMessage != null
+              ? SingleChildScrollView(
+                  controller: scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.9,
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                        child: Text(
+                          widget.errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 14.0,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              : widget.faskesWithDistance.isEmpty
               ? SingleChildScrollView(
                   controller: scrollController,
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -172,13 +213,10 @@ class _FaskesListBottomSheetState extends State<FaskesListBottomSheet> {
                           ),
                         ),
                         Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: 60.0,
-                          ), // Memberi jarak atas bawah tanpa merusak layout
+                          padding: const EdgeInsets.symmetric(vertical: 60.0),
                           child: Text(
                             'Tidak ada Faskes di sekitar Anda',
-                            textAlign:
-                                TextAlign.center, // Membuat teks rata tengah
+                            textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 14.0,
                               color: AppColors.textSecondary,
