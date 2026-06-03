@@ -32,7 +32,7 @@ Future<void> main() async {
   // 2. INISIALISASI & DAFTARKAN BACKGROUND SERVICE (LOKASI)
   // ========================================================
   Workmanager().initialize(
-    callbackDispatcher, 
+    callbackDispatcher,
     isInDebugMode: true, // Beri notif saat jalan (Ubah ke false saat rilis)
   );
 
@@ -77,9 +77,7 @@ class MyApp extends StatelessWidget {
         fontFamily: "PlusJakartaSans",
         colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
       ),
-      routes: {
-        '/login': (context) => const LandingPage(),
-      },
+      routes: {'/login': (context) => const LandingPage()},
       home: const AuthGate(),
     );
   }

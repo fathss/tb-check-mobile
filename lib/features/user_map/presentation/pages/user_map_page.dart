@@ -82,8 +82,18 @@ class _UserMapPageState extends ConsumerState<UserMapPage> {
     final query = _searchController.text.trim().toLowerCase();
 
     return allFaskes.where((faskes) {
-      if (_selectedTipe != 'Semua' && faskes.tipe != _selectedTipe) {
-        return false;
+      if (_selectedTipe != 'Semua') {
+        final typeLower = faskes.tipe.toLowerCase();
+        final selectedLower = _selectedTipe.toLowerCase();
+
+        if (selectedLower == 'puskesmas' && !typeLower.contains('puskesmas')) {
+          return false;
+        }
+
+        if (selectedLower == 'rumah sakit' &&
+            !(typeLower.contains('rumah sakit') || typeLower.contains('rs'))) {
+          return false;
+        }
       }
 
       if (query.isNotEmpty) {
@@ -126,24 +136,6 @@ class _UserMapPageState extends ConsumerState<UserMapPage> {
 
     list.sort((a, b) => a.distance.compareTo(b.distance));
     return list;
-  }
-
-  Set<Marker> _buildMarkers(List<FaskesWithDistance> faskesWithDistance) {
-    return faskesWithDistance
-        .map(
-          (entry) => Marker(
-            markerId: MarkerId(entry.faskes.id),
-            position: entry.faskes.posisi,
-            infoWindow: InfoWindow(title: entry.faskes.nama),
-            onTap: () async {
-              final state = _faskesSheetKey.currentState;
-              if (state != null) {
-                (state as dynamic).selectFaskes(entry.faskes);
-              }
-            },
-          ),
-        )
-        .toSet();
   }
 
   void _clearPolylines() {
@@ -220,7 +212,32 @@ class _UserMapPageState extends ConsumerState<UserMapPage> {
         : const <Faskes>[];
     final filteredFaskes = _filterFaskes(allFaskes);
     final faskesWithDistance = _buildFaskesWithDistance(filteredFaskes);
-    final markers = _buildMarkers(faskesWithDistance);
+
+    final markersAsync = ref.watch(mapMarkersProvider);
+    final baseMarkers = markersAsync.value ?? const <Marker>{};
+
+    final markers = baseMarkers
+        .where(
+          (marker) => faskesWithDistance.any(
+            (element) => element.faskes.id == marker.markerId.value,
+          ),
+        )
+        .map((marker) {
+          final targetFaskes = faskesWithDistance.firstWhere(
+            (element) => element.faskes.id == marker.markerId.value,
+          );
+
+          return marker.copyWith(
+            infoWindowParam: InfoWindow(title: targetFaskes.faskes.nama),
+            onTapParam: () async {
+              final state = _faskesSheetKey.currentState;
+              if (state != null) {
+                (state as dynamic).selectFaskes(targetFaskes.faskes);
+              }
+            },
+          );
+        })
+        .toSet();
 
     return Scaffold(
       body: _currentPosition == null

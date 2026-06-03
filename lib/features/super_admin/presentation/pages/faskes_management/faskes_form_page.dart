@@ -4,6 +4,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:tbcheck_app/core/theme/app_colors.dart';
 import 'package:tbcheck_app/features/super_admin/presentation/controllers/faskes_management_controller.dart';
 import 'package:tbcheck_app/features/super_admin/data/models/faskes_upsert_request.dart';
+import 'package:tbcheck_app/features/super_admin/presentation/controllers/geocoding_controller.dart';
 import 'package:tbcheck_app/features/super_admin/presentation/pages/faskes_management/faskes_map_picker_page.dart';
 import 'package:tbcheck_app/features/super_admin/presentation/widgets/custom_button.dart';
 import 'package:tbcheck_app/features/super_admin/presentation/pages/faskes_management/widgets/faskes_form_kategori.dart';
@@ -249,5 +250,37 @@ class _FaskesFormPageState extends ConsumerState<FaskesFormPage> {
     }
 
     ref.read(faskesFormControllerProvider.notifier).setCoordinate(coordinate);
+
+    try {
+      setState(() {
+        alamatLengkapController.text = 'Mengambil alamat otomatis...';
+      });
+
+      final alamatOtomatis = await ref
+          .read(geocodingControllerProvider)
+          .convertCoordinateToAddress(
+            coordinate.latitude,
+            coordinate.longitude,
+          );
+
+      if (!mounted) return;
+
+      setState(() {
+        alamatLengkapController.text = alamatOtomatis;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        alamatLengkapController.clear();
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal mendapatkan alamat otomatis: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

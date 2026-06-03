@@ -57,17 +57,18 @@ class FaskesCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4.0),
+                    const SizedBox(height: 8.0),
                     Text(
                       faskes.lokasi,
                       style: const TextStyle(
                         fontSize: 12.0,
                         color: AppColors.textSecondary,
+                        height: 1.3,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4.0),
+                    const SizedBox(height: 8.0),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8.0,
@@ -89,6 +90,7 @@ class FaskesCard extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(width: 24.0),
               Text(
                 distanceText,
                 style: const TextStyle(
