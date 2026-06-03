@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tbcheck_app/core/theme/app_colors.dart';
-import 'package:tbcheck_app/features/user_map/models/faskes_model.dart';
+import 'package:tbcheck_app/features/user_map/data/models/faskes_model.dart';
 
 class FaskesCard extends StatelessWidget {
   final Faskes faskes;
@@ -57,17 +57,18 @@ class FaskesCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4.0),
+                    const SizedBox(height: 8.0),
                     Text(
                       faskes.lokasi,
                       style: const TextStyle(
                         fontSize: 12.0,
                         color: AppColors.textSecondary,
+                        height: 1.3,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4.0),
+                    const SizedBox(height: 8.0),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8.0,
@@ -89,6 +90,7 @@ class FaskesCard extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(width: 24.0),
               Text(
                 distanceText,
                 style: const TextStyle(
