@@ -5,6 +5,7 @@ import 'package:tbcheck_app/features/medicine/providers/medicine_provider.dart';
 import 'package:tbcheck_app/features/user_profile/presentation/controllers/user_profile_controller.dart';
 // Wajib import auth_storage untuk mengambil ID dinamis
 import 'package:tbcheck_app/features/auth/data/datasources/auth_storage.dart';
+import '../notifications/notification_page.dart'; // Sesuaikan path-nya
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -112,10 +113,21 @@ class _HomePageState extends ConsumerState<HomePage> {
                               ),
                             ],
                           ),
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.grey.shade300), color: Colors.white),
-                            child: const Icon(Icons.notifications_none_rounded, color: Colors.black87, size: 24),
+                          
+                          // --- TOMBOL NOTIFIKASI YANG SUDAH BISA DIKLIK ---
+                          InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context, 
+                                MaterialPageRoute(builder: (context) => const NotificationPage())
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(50),
+                            child: Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: Colors.grey.shade300), color: Colors.white),
+                              child: const Icon(Icons.notifications_none_rounded, color: Colors.black87, size: 24),
+                            ),
                           ),
                         ],
                       ),

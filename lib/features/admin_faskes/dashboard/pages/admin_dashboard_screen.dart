@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../providers/dashboard_provider.dart';
-import '../../patients/pages/patient_form_page.dart'; 
 import '../../patients/providers/patient_provider.dart'; 
+
+// Import halaman form manual dan form assign
+import 'package:tbcheck_app/features/admin_faskes/patients/pages/patient_form_page.dart';
+import 'package:tbcheck_app/features/admin_faskes/patients/pages/assign_patient_page.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({Key? key}) : super(key: key);
@@ -137,13 +140,50 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           const Text('Aksi Cepat', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           
-          // --- TOMBOL AKSI CEPAT (Kini menjadi satu tombol lebar yang elegan) ---
+          // --- TOMBOL AKSI CEPAT DENGAN POP-UP ---
           _buildWideActionCard(
             icon: Icons.person_add_alt_1_rounded,
             label: 'Tambah Pasien Baru',
             subLabel: 'Daftarkan data dan lokasi awal pasien',
             onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const PatientFormPage()));
+              // Menampilkan Pop-Up (Bottom Sheet) Pilihan Metode Pendaftaran
+              showModalBottomSheet(
+                context: context,
+                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                builder: (context) {
+                  return Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("Pilih Metode Pendaftaran", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 24),
+                        ListTile(
+                          leading: const CircleAvatar(backgroundColor: Color(0xFFE9F0FF), child: Icon(Icons.search, color: Colors.blue)),
+                          title: const Text("Tarik Pengguna Terdaftar", style: TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: const Text("Cari berdasarkan NIK pengguna aplikasi"),
+                          onTap: () {
+                            Navigator.pop(context); // Tutup bottom sheet
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const AssignPatientPage()));
+                          },
+                        ),
+                        const Divider(),
+                        ListTile(
+                          leading: const CircleAvatar(backgroundColor: Color(0xFFFDE8E8), child: Icon(Icons.edit_document, color: Colors.red)),
+                          title: const Text("Input Manual", style: TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: const Text("Daftarkan pasien yang belum memiliki akun"),
+                          onTap: () {
+                            Navigator.pop(context); // Tutup bottom sheet
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const PatientFormPage()));
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  );
+                }
+              );
             },
           ),
           
@@ -254,7 +294,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // KARTU AKSI LEBAR (Pengganti dua kotak sebelumnya)
+  // KARTU AKSI LEBAR 
   Widget _buildWideActionCard({required IconData icon, required String label, required String subLabel, required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
@@ -288,7 +328,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // ==========================================
-  // EFEK LOADING SKELETON (FULL PAGE SHIMMER)
+  // EFEK LOADING SKELETON
   // ==========================================
   Widget _buildFullPageShimmer({Key? key}) {
     return SingleChildScrollView(
@@ -301,11 +341,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Kerangka Total Kasus
             Container(width: double.infinity, height: 130, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20))),
             const SizedBox(height: 16),
-            
-            // Kerangka Pasien Aktif & Sembuh
             Row(
               children: [
                 Expanded(child: Container(height: 95, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)))),
@@ -313,19 +350,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 Expanded(child: Container(height: 95, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)))),
               ],
             ),
-            
             const SizedBox(height: 32),
             Container(width: 120, height: 20, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))), 
             const SizedBox(height: 16),
-            
-            // Kerangka Tombol Aksi Cepat (Sekarang menyesuaikan layout lebar)
             Container(width: double.infinity, height: 90, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20))),
-
             const SizedBox(height: 32),
             Container(width: 180, height: 20, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))), 
             const SizedBox(height: 16),
-
-            // Kerangka Alert Box
             Container(width: double.infinity, height: 85, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16))),
           ],
         ),

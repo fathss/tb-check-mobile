@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../models/patient_model.dart';
 import 'package:provider/provider.dart';
 import '../providers/patient_provider.dart';
+import 'patient_medication_log_page.dart'; 
 
 class PatientDetailPage extends StatelessWidget {
   final PatientModel patient;
@@ -27,6 +28,65 @@ class PatientDetailPage extends StatelessWidget {
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: Colors.white,
         elevation: 0,
+        // --- TAMBAHAN TOMBOL HAPUS (ACTIONS) ---
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+            onPressed: () async {
+              // 1. Munculkan Pop-up Konfirmasi
+              bool? confirm = await showDialog(
+                context: context,
+                builder: (dialogContext) => AlertDialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  title: const Text("Hapus Pasien?", style: TextStyle(fontWeight: FontWeight.bold)),
+                  content: const Text("Apakah Anda yakin ingin menghapus data pasien ini? Data tidak dapat dikembalikan."),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext, false), 
+                      child: const Text("Batal", style: TextStyle(color: Colors.grey))
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        elevation: 0,
+                      ),
+                      onPressed: () => Navigator.pop(dialogContext, true), 
+                      child: const Text("Ya, Hapus", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              );
+
+              // 2. Eksekusi Penghapusan jika user menekan "Ya"
+              if (confirm == true) {
+                if (!context.mounted) return;
+                
+                // Tampilkan loading sementara
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Menghapus data..."), duration: Duration(seconds: 1))
+                );
+                
+                final success = await context.read<PatientProvider>().deletePatient(patient.id);
+                
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Data pasien berhasil dihapus"), backgroundColor: Colors.green)
+                  );
+                  Navigator.pop(context); // Otomatis kembali ke daftar pasien
+                } else {
+                  final errorMsg = context.read<PatientProvider>().errorMessage;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(errorMsg ?? "Gagal menghapus data"), backgroundColor: Colors.red)
+                  );
+                }
+              }
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -149,14 +209,38 @@ class PatientDetailPage extends StatelessWidget {
               ),
             ),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
 
-            // --- TOMBOL PERBARUI ---
+            // --- TOMBOL PANTAU OBAT (BARU) ---
             SizedBox(
               width: double.infinity,
               height: 54,
               child: ElevatedButton.icon(
-                onPressed: () => _showUpdateStatusDialog(context), // Memanggil fungsi pop-up estetik
+                onPressed: () {
+                  Navigator.push(
+                    context, 
+                    MaterialPageRoute(builder: (_) => PatientMedicationLogPage(patient: patient))
+                  );
+                },
+                icon: const Icon(Icons.health_and_safety_rounded, color: Color(0xFF1060EF)),
+                label: const Text('Pantau Kepatuhan Obat', 
+                  style: TextStyle(color: Color(0xFF1060EF), fontWeight: FontWeight.bold, fontSize: 16)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE9F0FF), // Warna biru muda
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  elevation: 0,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // --- TOMBOL PERBARUI STATUS (LAMA) ---
+            SizedBox(
+              width: double.infinity,
+              height: 54,
+              child: ElevatedButton.icon(
+                onPressed: () => _showUpdateStatusDialog(context), 
                 icon: const Icon(Icons.history_rounded, color: Colors.white),
                 label: const Text('Perbarui Status Pasien', 
                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),

@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../providers/patient_provider.dart';
 import 'patient_form_page.dart';
 import 'patient_detail_page.dart';
+import 'package:tbcheck_app/features/admin_faskes/patients/pages/patient_form_page.dart';
+import 'package:tbcheck_app/features/admin_faskes/patients/pages/assign_patient_page.dart';
 
 class PatientListPage extends StatefulWidget {
   const PatientListPage({Key? key}) : super(key: key);
@@ -33,19 +35,56 @@ class _PatientListPageState extends State<PatientListPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Container(
+          IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFFE9F0FF), // Biru sangat muda
-                borderRadius: BorderRadius.circular(12),
+                color: const Color(0xFFE9F0FF),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: IconButton(
-                icon: const Icon(Icons.person_add_alt_1_rounded, color: Color(0xFF1060EF)),
-                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const PatientFormPage())),
-              ),
+              child: const Icon(Icons.person_add_alt_1_rounded, color: Colors.blue),
             ),
-          )
+            onPressed: () {
+              // TAMPILKAN POP-UP BOTTOM SHEET DI SINI
+              showModalBottomSheet(
+                context: context,
+                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+                builder: (context) {
+                  return Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("Pilih Metode Pendaftaran", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 24),
+                        ListTile(
+                          leading: const CircleAvatar(backgroundColor: Color(0xFFE9F0FF), child: Icon(Icons.search, color: Colors.blue)),
+                          title: const Text("Tarik Pengguna Terdaftar", style: TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: const Text("Cari berdasarkan NIK pengguna aplikasi"),
+                          onTap: () {
+                            Navigator.pop(context); // Tutup pop-up
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const AssignPatientPage()));
+                          },
+                        ),
+                        const Divider(),
+                        ListTile(
+                          leading: const CircleAvatar(backgroundColor: Color(0xFFFDE8E8), child: Icon(Icons.edit_document, color: Colors.red)),
+                          title: const Text("Input Manual", style: TextStyle(fontWeight: FontWeight.bold)),
+                          subtitle: const Text("Daftarkan pasien yang belum memiliki akun"),
+                          onTap: () {
+                            Navigator.pop(context); // Tutup pop-up
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const PatientFormPage()));
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  );
+                }
+              );
+            },
+          ),
         ],
       ),
       body: Column(
@@ -143,13 +182,14 @@ class _PatientListPageState extends State<PatientListPage> {
   Widget _buildPatientCard(dynamic patient) {
     // Mapping warna status
     Color statusColor;
-    String statusText = patient.status;
+    String statusText = patient.displayStatus; // Memanggil logika dari PatientModel
     
-    if (patient.status.toLowerCase().contains('aktif')) {
-      statusColor = const Color(0xFF1060EF);
-      statusText = "Aktif Dirawat";
-    } else if (patient.status.toLowerCase().contains('sembuh')) {
-      statusColor = Colors.green;
+    if (statusText == 'Aktif Dirawat') {
+      statusColor = const Color(0xFF1060EF); // Biru
+    } else if (statusText == 'Sembuh') {
+      statusColor = Colors.green; // Hijau
+    } else if (statusText == 'Drop-out') {
+      statusColor = Colors.red.shade400; // Merah untuk peringatan Drop-out
     } else {
       statusColor = Colors.grey;
     }

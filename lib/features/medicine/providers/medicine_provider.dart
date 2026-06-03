@@ -3,8 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/constants/app_constants.dart';
 import '../models/today_schedule_model.dart';
+// --- IMPORT BARU UNTUK ADMIN SURVEILLANCE ---
+import '../../auth/data/datasources/auth_storage.dart';
+import '../models/medication_log_model.dart'; 
 
 class MedicineProvider with ChangeNotifier {
+  // ==========================================
+  // STATE UNTUK SISI PASIEN
+  // ==========================================
   List<TodayScheduleModel> _todaySchedules = [];
   bool _isLoading = false;
   String? _errorMessage;
@@ -13,35 +19,86 @@ class MedicineProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  // --- 1. VARIABEL PROGRESS DIJADIKAN DINAMIS ---
   int _totalDosis = 180; 
   int _dosisSelesai = 0; 
 
   int get totalDosis => _totalDosis;
   int get dosisSelesai => _dosisSelesai;
 
-  // --- VARIABEL UNTUK DAFTAR SEMUA OBAT ---
   List<dynamic> _allMedicines = [];
   List<dynamic> get allMedicines => _allMedicines;
   
-  // Menggunakan .clamp(0.0, 1.0) agar jika ada error data, bar tidak melebar keluar batas (maksimal 100%)
   double get progressPercentage => _totalDosis > 0 ? (_dosisSelesai / _totalDosis).clamp(0.0, 1.0) : 0.0;
 
-    // --- VARIABEL UNTUK JADWAL KALENDER ---
   List<dynamic> _selectedDateSchedules = [];
   List<dynamic> get selectedDateSchedules => _selectedDateSchedules;
   bool _isCalendarLoading = false;
   bool get isCalendarLoading => _isCalendarLoading;
 
+  // ==========================================
+  // STATE BARU UNTUK SISI ADMIN (SURVEILLANCE)
+  // ==========================================
+  List<MedicationLogModel> _dailyLogs = [];
+  double _complianceRate = 0.0;
 
-  // --- FUNGSI FETCH JADWAL HARI INI (REVISI PROGRESS HARIAN) ---
+  List<MedicationLogModel> get dailyLogs => _dailyLogs;
+  double get complianceRate => _complianceRate;
+
+
+  // ==========================================
+  // FUNGSI SISI ADMIN (BARU)
+  // ==========================================
+  Future<void> fetchMedicationLogs(String patientId, DateTime date) async {
+    _isLoading = true;
+    _errorMessage = null;
+    
+    // Format tanggal ke YYYY-MM-DD
+    final dateString = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+    notifyListeners();
+
+    try {
+      final authStorage = AuthStorage();
+      final token = await authStorage.getToken();
+
+      final url = '${AppConstants.baseUrl}/Patient/$patientId/medication-logs?date=$dateString';
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        }
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        _complianceRate = (data['complianceRate'] ?? 0).toDouble();
+        
+        final List<dynamic> logsJson = data['logs'] ?? [];
+        _dailyLogs = logsJson.map((json) => MedicationLogModel.fromJson(json)).toList();
+      } else {
+        _errorMessage = 'Gagal memuat data kepatuhan obat.';
+      }
+    } catch (e) {
+      _errorMessage = 'Terjadi kesalahan jaringan.';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+
+  // ==========================================
+  // FUNGSI SISI PASIEN (LAMA - TIDAK DIUBAH)
+  // ==========================================
+  
+  // --- FUNGSI FETCH JADWAL HARI INI ---
   Future<void> fetchTodaySchedule(String patientId) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      // Tarik Jadwal Hari Ini
       final scheduleUrl = '${AppConstants.baseUrl}/MedicineSchedules/today/$patientId';
       final scheduleResponse = await http.get(Uri.parse(scheduleUrl)).timeout(const Duration(seconds: 15));
 
@@ -49,20 +106,13 @@ class MedicineProvider with ChangeNotifier {
         final List<dynamic> data = json.decode(scheduleResponse.body);
         _todaySchedules = data.map((json) => TodayScheduleModel.fromJson(json)).toList();
 
-        // LOGIKA BARU: Hitung progress murni dari jadwal HARI INI saja
         _totalDosis = _todaySchedules.length;
-        
-        // Hitung berapa obat yang isDone == true
         _dosisSelesai = _todaySchedules.where((schedule) => schedule.isDone).length;
-
       } else {
         _errorMessage = 'Gagal memuat jadwal obat';
         _totalDosis = 0;
         _dosisSelesai = 0;
       }
-      
-      // Catatan: Pemanggilan API progress C# sudah dihapus karena kita hitung secara lokal.
-
     } catch (e) {
       _errorMessage = 'Terjadi kesalahan jaringan';
       _totalDosis = 0;
@@ -73,7 +123,7 @@ class MedicineProvider with ChangeNotifier {
     }
   }
 
-  // --- 3. FUNGSI TARIK SEMUA OBAT ---
+  // --- FUNGSI TARIK SEMUA OBAT ---
   Future<void> fetchAllMedicines(String patientId) async {
     try {
       final url = '${AppConstants.baseUrl}/Medicines?patientId=$patientId';
@@ -82,7 +132,7 @@ class MedicineProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
         _allMedicines = data;
-        notifyListeners(); // Refresh UI
+        notifyListeners(); 
       }
     } catch (e) {
       print("EXCEPTION FETCH ALL MEDICINES: $e");
@@ -95,7 +145,6 @@ class MedicineProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Format tanggal menjadi YYYY-MM-DD untuk C#
       String formattedDate = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
       
       final url = '${AppConstants.baseUrl}/MedicineSchedules/date/$patientId?date=$formattedDate';
@@ -115,7 +164,7 @@ class MedicineProvider with ChangeNotifier {
     }
   }
 
-  // Fungsi untuk menekan tombol konfirmasi minum obat
+  // --- Fungsi untuk menekan tombol konfirmasi minum obat ---
   Future<bool> confirmConsume(String scheduleId, String patientId) async {
     try {
       final url = '${AppConstants.baseUrl}/MedicineSchedules/confirm/$scheduleId';
@@ -125,8 +174,6 @@ class MedicineProvider with ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
-        // Karena fetchTodaySchedule memanggil API Jadwal & API Progress sekaligus,
-        // UI (centang hijau & progress bar) akan otomatis ter-update di sini!
         await fetchTodaySchedule(patientId);
         return true;
       }
@@ -136,7 +183,7 @@ class MedicineProvider with ChangeNotifier {
     }
   }
 
-  // Fungsi untuk Menambahkan Obat Baru
+  // --- Fungsi untuk Menambahkan Obat Baru ---
   Future<bool> addMedicine({
     required String patientId,
     required String name,
@@ -146,12 +193,11 @@ class MedicineProvider with ChangeNotifier {
     required int imageIndex,
     required String condition,
     required List<bool> activeDays,
-    required List<String> consumeTimes, // Harus format "HH:mm" (24 jam)
+    required List<String> consumeTimes, 
   }) async {
     try {
       final url = '${AppConstants.baseUrl}/Medicines';
       
-      // Susun Payload sesuai dengan model Entity Framework yang lama
       Map<String, dynamic> payload = {
         "PatientId": patientId,
         "Name": name,
@@ -174,7 +220,7 @@ class MedicineProvider with ChangeNotifier {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         await fetchTodaySchedule(patientId);
-        await fetchAllMedicines(patientId); // <--- BARIS INI YANG DITAMBAHKAN
+        await fetchAllMedicines(patientId); 
         return true;
       }
       return false;

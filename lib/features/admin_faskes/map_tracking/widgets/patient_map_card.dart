@@ -40,7 +40,8 @@ class PatientMapCard extends StatelessWidget {
           child: Text(patient.address ?? 'Alamat Belum Terisi', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
         ),
         trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding
+          : const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(color: bagColor, borderRadius: BorderRadius.circular(20)),
           child: Text(patient.status, style: TextStyle(color: textColor, fontSize: 11, fontWeight: FontWeight.bold)),
         ),
