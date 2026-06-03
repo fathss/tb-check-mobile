@@ -9,6 +9,20 @@ class PatientModel {
   final double? latitude;
   final double? longitude;
 
+  // --- TAMBAHKAN GETTER DI SINI ---
+  String get displayStatus {
+    final s = status.toLowerCase();
+    if (s.contains('aktif')) {
+      return 'Aktif Dirawat';
+    } else if (s.contains('drop')) {
+      return 'Drop-out';
+    } else if (s.contains('sembuh')) {
+      return 'Sembuh';
+    }
+    return status; 
+  }
+  // --------------------------------
+
   PatientModel({
     required this.id,
     required this.nik,

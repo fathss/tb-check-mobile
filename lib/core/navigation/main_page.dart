@@ -6,6 +6,9 @@ import 'package:tbcheck_app/features/user_map/pages/user_map_page.dart';
 import 'package:tbcheck_app/features/medicine/pages/medicine_page.dart';
 import 'package:tbcheck_app/features/user_profile/pages/profile_page.dart';
 
+// --- 1. TAMBAHKAN IMPORT HELPER PERIZINAN LOKASI ---
+import 'package:tbcheck_app/core/utils/location_permission_helper.dart'; 
+
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
 
@@ -23,6 +26,18 @@ class _MainPageState extends State<MainPage> {
     MedicinePage(),
     ProfilePage(),
   ];
+
+  // --- 2. TAMBAHKAN INITSTATE UNTUK MEMUNCULKAN POP-UP ---
+  @override
+  void initState() {
+    super.initState();
+    // WidgetsBinding memastikan pop-up dipanggil HANYA SETELAH halaman selesai dirender
+    // agar tidak terjadi error tabrakan UI.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      LocationPermissionHelper.checkAndRequestPermission(context);
+    });
+  }
+  // -------------------------------------------------------
 
   void _onItemTapped(int index) {
     setState(() {

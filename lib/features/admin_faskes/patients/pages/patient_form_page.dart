@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../providers/patient_provider.dart';
-import 'dart:convert'; // Untuk json.decode
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // Untuk mengambil API Key
-import 'package:http/http.dart' as http; // Untuk request HTTP
-import 'package:geolocator/geolocator.dart'; // Tambahan untuk menarik koordinat GPS asli
+import 'dart:convert';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; 
+import 'package:http/http.dart' as http; 
+import 'package:geolocator/geolocator.dart'; 
 
 class PatientFormPage extends StatefulWidget {
   const PatientFormPage({Key? key}) : super(key: key);
@@ -18,12 +18,11 @@ class _PatientFormPageState extends State<PatientFormPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nikController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _addressController = TextEditingController(); // Hanya ada 1 field alamat
+  final TextEditingController _addressController = TextEditingController(); 
   
   String _selectedTBType = 'Paru';
   DateTime _selectedDate = DateTime.now();
 
-  // Variabel untuk menyimpan koordinat
   double? _latitude;
   double? _longitude;
 
@@ -39,7 +38,6 @@ class _PatientFormPageState extends State<PatientFormPage> {
     }
   }
 
-  // Fungsi untuk membuka halaman Map Picker
   Future<void> _openMapPicker() async {
     final initialLat = _latitude ?? -7.250445;
     final initialLng = _longitude ?? 112.768845;
@@ -57,12 +55,10 @@ class _PatientFormPageState extends State<PatientFormPage> {
         _longitude = pickedLocation.longitude;
       });
 
-      // PANGGIL FUNGSI REVERSE GEOCODING OTOMATIS DISINI
       _getAddressFromCoordinates(pickedLocation.latitude, pickedLocation.longitude);
     }
   }
 
-  // FUNGSI BARU: MENGUBAH KOORDINAT MENJADI TEKS ALAMAT NYATA
   Future<void> _getAddressFromCoordinates(double lat, double lng) async {
     setState(() {
       _addressController.text = "Mencari alamat otomatis..."; 
@@ -71,7 +67,6 @@ class _PatientFormPageState extends State<PatientFormPage> {
     try {
       final apiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
       
-      // Jika API Key kosong, langsung beri tahu di console
       if (apiKey.isEmpty) {
         print("ERROR: API Key kosong! Cek file .env kamu.");
         setState(() { _addressController.text = ""; });
@@ -82,11 +77,6 @@ class _PatientFormPageState extends State<PatientFormPage> {
       final url = 'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=$apiKey';
       
       final response = await http.get(Uri.parse(url));
-      
-      // CEK APA KATA GOOGLE DI SINI:
-      print("===== RESPON GOOGLE MAPS =====");
-      print(response.body); 
-      print("==============================");
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -98,7 +88,6 @@ class _PatientFormPageState extends State<PatientFormPage> {
           });
         } else {
           setState(() { _addressController.text = ""; });
-          // Ubah pesan error agar lebih spesifik
           _showSnackBar('Google Maps menolak: ${data['status']}', Colors.orange);
         }
       } else {
@@ -110,7 +99,6 @@ class _PatientFormPageState extends State<PatientFormPage> {
     }
   }
 
-  // Fungsi helper untuk mempermudah pemanggilan SnackBar
   void _showSnackBar(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: color),
@@ -119,43 +107,33 @@ class _PatientFormPageState extends State<PatientFormPage> {
 
   void _submitForm() async {
     if (_latitude == null || _longitude == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mohon tentukan titik lokasi di peta terlebih dahulu!'), backgroundColor: Colors.orange),
-      );
+      _showSnackBar('Mohon tentukan titik lokasi di peta terlebih dahulu!', Colors.orange);
       return;
     }
 
     if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Menyimpan data...')),
+      _showSnackBar('Menyimpan data...', Colors.blue);
+
+      // --- KODE YANG DIPERBAIKI: MEMANGGIL FUNGSI CREATE DENGAN NAMED PARAMETERS ---
+      final success = await context.read<PatientProvider>().createPatient(
+        nik: _nikController.text,
+        fullName: _nameController.text,
+        tbType: _selectedTBType,
+        diagnosisDate: _selectedDate.toUtc().toIso8601String(),
+        latitude: _latitude!, 
+        longitude: _longitude!, 
+        address: _addressController.text,
       );
-
-      final newPatientData = {
-        "nik": _nikController.text,
-        "fullName": _nameController.text,
-        "tbType": _selectedTBType,
-        "diagnosisDate": _selectedDate.toUtc().toIso8601String(),
-        "latitude": _latitude, 
-        "longitude": _longitude, 
-        "address": _addressController.text,
-        "faskesProfileId": "65a0f259-fe09-4dd6-b241-461fa5423991" // ID Asli NeonDB
-      };
-
-      final success = await context.read<PatientProvider>().createPatient(newPatientData);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
       if (success) {
-        context.read<PatientProvider>().fetchPatients();
         Navigator.pop(context); 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Data berhasil disimpan!'), backgroundColor: Colors.green),
-        );
+        _showSnackBar('Data berhasil disimpan!', Colors.green);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal menyimpan data.'), backgroundColor: Colors.red),
-        );
+        final errorMsg = context.read<PatientProvider>().errorMessage;
+        _showSnackBar(errorMsg ?? 'Gagal menyimpan data.', Colors.red);
       }
     }
   }
@@ -217,7 +195,6 @@ class _PatientFormPageState extends State<PatientFormPage> {
               ),
               const SizedBox(height: 24),
 
-              // UI MAP PICKER
               const Text('Titik Koordinat (Geospasial)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
               const SizedBox(height: 8),
               Container(
@@ -253,8 +230,10 @@ class _PatientFormPageState extends State<PatientFormPage> {
                 height: 54,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.blue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                  onPressed: _submitForm,
-                  child: const Text('Simpan Data Pasien', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  onPressed: context.watch<PatientProvider>().isLoading ? null : _submitForm,
+                  child: context.watch<PatientProvider>().isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('Simpan Data Pasien', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                 ),
               )
             ],
@@ -280,24 +259,20 @@ class MapPickerScreen extends StatefulWidget {
 
 class _MapPickerScreenState extends State<MapPickerScreen> {
   late LatLng _currentPosition;
-  GoogleMapController? _mapController; // Tambahkan controller untuk menggerakkan kamera
+  GoogleMapController? _mapController; 
 
   @override
   void initState() {
     super.initState();
     _currentPosition = LatLng(widget.initialLat, widget.initialLng);
 
-    // Cek apakah koordinat masih default (Pasien Baru). Jika ya, otomatis cari lokasi asli GPS!
-    // (-7.250445 adalah default latitude yang kamu pasang di fungsi _openMapPicker)
     if (widget.initialLat == -7.250445) {
       _snapToCurrentLocation();
     }
   }
 
-  // Fungsi untuk mengambil koordinat asli GPS HP dan memindahkan kamera
   Future<void> _snapToCurrentLocation() async {
     try {
-      // Ambil posisi saat ini (Karena permission sudah beres, ini akan langsung jalan)
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
@@ -310,10 +285,9 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
         });
       }
 
-      // Animasi kamera terbang ke lokasi asli pengguna
       if (_mapController != null) {
         _mapController!.animateCamera(
-          CameraUpdate.newLatLngZoom(myRealLocation, 17.5), // Zoom level 17.5 agar detail
+          CameraUpdate.newLatLngZoom(myRealLocation, 17.5), 
         );
       }
     } catch (e) {
@@ -334,17 +308,16 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
           GoogleMap(
             initialCameraPosition: CameraPosition(target: _currentPosition, zoom: 16),
             onMapCreated: (controller) {
-              _mapController = controller; // Simpan controller saat peta berhasil dirender
+              _mapController = controller; 
             },
             onCameraMove: (CameraPosition position) {
               _currentPosition = position.target; 
             },
-            myLocationEnabled: true, // Akan memunculkan titik biru lokasi asli
-            myLocationButtonEnabled: true, // Tombol bawaan Google Maps untuk kembali ke lokasi asli
+            myLocationEnabled: true, 
+            myLocationButtonEnabled: true, 
             zoomControlsEnabled: false,
           ),
           
-          // PIN STATIS DI TENGAH LAYAR
           const Center(
             child: Padding(
               padding: EdgeInsets.only(bottom: 35), 
@@ -352,7 +325,6 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
             ),
           ),
           
-          // TOMBOL PILIH LOKASI (Di Bawah)
           Positioned(
             bottom: 30,
             left: 24,

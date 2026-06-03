@@ -6,6 +6,7 @@ import '../../patients/models/patient_model.dart';
 import '../utils/marker_generator.dart';
 import '../widgets/map_bottom_sheet.dart';
 import 'user_map_detail_page.dart';
+import 'package:geolocator/geolocator.dart';
 
 class AdminMapPage extends StatefulWidget {
   const AdminMapPage({Key? key}) : super(key: key);
@@ -261,7 +262,33 @@ class _AdminMapPageState extends State<AdminMapPage> {
                 top: 155, right: 16,
                 child: Column(
                   children: [
-                    FloatingActionButton.small(heroTag: "btnLoc", backgroundColor: Colors.white, onPressed: () => _mapController?.animateCamera(CameraUpdate.newLatLngZoom(_initialPosition.target, 12.5)), child: const Icon(Icons.my_location_rounded, color: Colors.black87)),
+                    FloatingActionButton.small(
+                      heroTag: "btnLoc",
+                      backgroundColor: Colors.white,
+                      onPressed: () async {
+                        // Munculkan tulisan loading kecil di bawah
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Mencari lokasi Anda...'), duration: Duration(seconds: 1))
+                        );
+                        
+                        try {
+                          // Ambil lokasi asli GPS HP Admin
+                          Position position = await Geolocator.getCurrentPosition(
+                            desiredAccuracy: LocationAccuracy.high
+                          );
+                          
+                          // Terbangkan kamera ke lokasi tersebut dengan zoom lebih dekat (15.0)
+                          _mapController?.animateCamera(CameraUpdate.newLatLngZoom(
+                            LatLng(position.latitude, position.longitude), 15.0
+                          ));
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Gagal mendapatkan lokasi. Pastikan GPS menyala.'), backgroundColor: Colors.red)
+                          );
+                        }
+                      },
+                      child: const Icon(Icons.my_location_rounded, color: Colors.black87),
+                    ),
                     const SizedBox(height: 12),
                     FloatingActionButton.small(heroTag: "btnRef", backgroundColor: Colors.white, onPressed: () { provider.fetchPatients(); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sinkronisasi data...'))); }, child: const Icon(Icons.refresh_rounded, color: Color(0xFF1060EF))),
                   ],

@@ -4,6 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
+// --- TAMBAHKAN IMPORT WORKMANAGER DAN SERVICE ---
+import 'package:workmanager/workmanager.dart';
+import 'package:tbcheck_app/core/services/background_location_service.dart';
+// ------------------------------------------------
+
 import 'package:tbcheck_app/core/theme/app_colors.dart';
 import 'package:tbcheck_app/core/utils/jwt_utils.dart';
 import 'package:tbcheck_app/features/auth/data/datasources/auth_storage.dart';
@@ -23,7 +28,25 @@ Future<void> main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Setup Localization
+  // ========================================================
+  // 2. INISIALISASI & DAFTARKAN BACKGROUND SERVICE (LOKASI)
+  // ========================================================
+  Workmanager().initialize(
+    callbackDispatcher, 
+    isInDebugMode: true, // Beri notif saat jalan (Ubah ke false saat rilis)
+  );
+
+  Workmanager().registerPeriodicTask(
+    "1", // ID Unik Tugas
+    fetchBackgroundLocationTask,
+    frequency: const Duration(hours: 1), // Berjalan 1 Jam Sekali
+    constraints: Constraints(
+      networkType: NetworkType.connected, // Hanya jalan jika ada internet
+    ),
+  );
+  // ========================================================
+
+  // 3. Setup Localization
   await initializeDateFormatting('id_ID', null);
 
   runApp(
@@ -54,11 +77,9 @@ class MyApp extends StatelessWidget {
         fontFamily: "PlusJakartaSans",
         colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
       ),
-      // --- PENAMBAHAN ROUTES UNTUK LOGOUT ---
       routes: {
         '/login': (context) => const LandingPage(),
       },
-      // --------------------------------------
       home: const AuthGate(),
     );
   }
