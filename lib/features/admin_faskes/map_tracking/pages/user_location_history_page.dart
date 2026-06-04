@@ -184,7 +184,7 @@ class _UserLocationHistoryPageState extends State<UserLocationHistoryPage> {
                   itemCount: histories.length,
                   itemBuilder: (context, index) {
                     final history = histories[index];
-                    String formattedTime = DateFormat('HH:mm').format(history.timestamp) + " WIB";
+                    String formattedTime = DateFormat('HH:mm').format(history.timestamp.toLocal()) + " WIB";
 
                     return _buildTimelineItem(
                       time: formattedTime,

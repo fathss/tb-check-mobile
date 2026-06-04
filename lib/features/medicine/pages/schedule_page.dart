@@ -6,7 +6,6 @@ import 'package:tbcheck_app/core/theme/app_colors.dart';
 import 'package:tbcheck_app/core/widgets/date_helper.dart';
 import 'package:tbcheck_app/features/medicine/providers/medicine_provider.dart';
 import 'package:tbcheck_app/features/user_profile/presentation/controllers/user_profile_controller.dart';
-// Sesuaikan import auth_storage ini dengan struktur foldermu
 import 'package:tbcheck_app/features/auth/data/datasources/auth_storage.dart'; 
 
 class SchedulePage extends ConsumerStatefulWidget {
@@ -19,7 +18,10 @@ class SchedulePage extends ConsumerStatefulWidget {
 class _SchedulePageState extends ConsumerState<SchedulePage> {
   final DateTime userRegisteredAt = DateTime(2026, 5, 17); // Bisa dibuat dinamis nanti
   late DateTime selectedDate;
-  String? currentPatientId; // Sekarang kosong, bukan hardcode lagi
+  String? currentPatientId;
+
+  // --- 1. Tambahkan Scroll Controller ---
+  late ScrollController _scrollController;
 
   final List<IconData> medicineIcons = [Icons.medication, Icons.medical_information, Icons.receipt_long, Icons.trip_origin];
   final List<Color> iconBgColors = [const Color(0xFFFFF0D4), const Color(0xFFFFE5F0), const Color(0xFFE0FAFA), const Color(0xFFE8EBFF)];
@@ -29,10 +31,40 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
   void initState() {
     super.initState();
     selectedDate = DateTime.now();
+    _scrollController = ScrollController(); // Inisialisasi controller
     
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initData();
+      _scrollToSelectedDate(); // --- 2. Panggil fungsi scroll setelah frame dirender
     });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose(); // Jangan lupa dispose controller-nya
+    super.dispose();
+  }
+
+  // --- 3. Buat logika perhitungan scroll ---
+  void _scrollToSelectedDate() {
+    // Hitung selisih hari dari startDate ke hari ini
+    // Pastikan kita mengabaikan jam/menit agar perhitungannya bulat per hari
+    DateTime start = DateTime(userRegisteredAt.year, userRegisteredAt.month, userRegisteredAt.day);
+    DateTime today = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    
+    int daysDifference = today.difference(start).inDays;
+
+    if (daysDifference > 0) {
+      // Lebar item (65) + Separator (12) = 77
+      double offset = daysDifference * 77.0; 
+      
+      // Animasikan scroll agar mulus dan elegan
+      _scrollController.animateTo(
+        offset,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
   Future<void> _initData() async {
@@ -104,6 +136,7 @@ class _SchedulePageState extends ConsumerState<SchedulePage> {
               SizedBox(
                 height: 85,
                 child: ListView.separated(
+                  controller: _scrollController, // --- 4. Pasang controller di ListView
                   scrollDirection: Axis.horizontal,
                   itemCount: dates.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 12),

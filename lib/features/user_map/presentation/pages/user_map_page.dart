@@ -13,6 +13,11 @@ import 'package:tbcheck_app/features/user_map/presentation/controllers/user_map_
 import 'package:tbcheck_app/features/user_map/presentation/widgets/faskes_list_bottom_sheet.dart';
 import 'package:tbcheck_app/features/user_map/presentation/widgets/filter_chip.dart';
 
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:tbcheck_app/features/auth/data/datasources/auth_storage.dart';
+import 'package:tbcheck_app/features/user_profile/presentation/controllers/user_profile_controller.dart';
+
 class UserMapPage extends ConsumerStatefulWidget {
   const UserMapPage({super.key});
 
@@ -47,6 +52,43 @@ class _UserMapPageState extends ConsumerState<UserMapPage> {
     super.dispose();
   }
 
+  // --- FUNGSI BARU UNTUK MENGIRIM LOKASI KE DATABASE ---
+  Future<void> _syncLocationToBackend(Position position) async {
+    try {
+      final authStorage = ref.read(authStorageProvider);
+      final token = await authStorage.getToken();
+      final userId = await authStorage.getUserId();
+
+      if (token == null || userId == null) return;
+
+      // Ambil patientId dari profil user yang sedang login
+      final summary = await ref.read(homeSummaryProvider(userId).future);
+      final patientId = summary.patientId;
+
+      // Jika belum terdaftar sebagai pasien, hentikan pengiriman
+      if (patientId == null) return; 
+
+      final url = '${AppConstants.baseUrl}/Patient/$patientId/locations';
+      
+      await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          "latitude": position.latitude,
+          "longitude": position.longitude,
+          "activityDescription": "Update lokasi otomatis (Membuka Peta)"
+        }),
+      );
+    } catch (e) {
+      // Kita print saja di console, tidak perlu dimunculkan ke UI 
+      // agar pasien tidak terganggu jika internetnya sedang putus.
+      debugPrint("Gagal sync lokasi ke backend: $e");
+    }
+  }
+
   Future<void> _checkPermission() async {
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
@@ -60,6 +102,8 @@ class _UserMapPageState extends ConsumerState<UserMapPage> {
     setState(() {
       _currentPosition = position;
     });
+
+    _syncLocationToBackend(position);
   }
 
   Future<void> _focusOnFaskes(Faskes faskes) async {

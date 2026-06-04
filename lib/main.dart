@@ -42,7 +42,7 @@ Future<void> main() async {
   Workmanager().registerPeriodicTask(
     "1", // ID Unik Tugas
     fetchBackgroundLocationTask,
-    frequency: const Duration(hours: 1), // Berjalan 1 Jam Sekali
+    frequency: const Duration(minutes: 15), // Berjalan 1 Jam Sekali
     constraints: Constraints(
       networkType: NetworkType.connected, // Hanya jalan jika ada internet
     ),

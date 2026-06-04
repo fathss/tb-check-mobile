@@ -3,10 +3,11 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import '../../patients/providers/patient_provider.dart';
 import '../../patients/models/patient_model.dart';
+import '../../profile/providers/faskes_profile_provider.dart'; // Import Provider Faskes
 import '../utils/marker_generator.dart';
 import '../widgets/map_bottom_sheet.dart';
 import 'user_map_detail_page.dart';
-import 'package:geolocator/geolocator.dart';
+// Import geolocator dihapus karena kita pakai koordinat Faskes dari database
 
 class AdminMapPage extends StatefulWidget {
   const AdminMapPage({Key? key}) : super(key: key);
@@ -23,8 +24,6 @@ class _AdminMapPageState extends State<AdminMapPage> {
 
   Set<Marker> _currentMarkers = {};
   String _lastDataHash = '';
-
-  // Mencatat titik tumpuk mana yang sedang 'mekar/dikipas'
   String? _expandedClusterKey;
 
   static const CameraPosition _initialPosition = CameraPosition(target: LatLng(-7.250445, 112.768845), zoom: 12.5);
@@ -32,14 +31,16 @@ class _AdminMapPageState extends State<AdminMapPage> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => context.read<PatientProvider>().fetchPatients());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PatientProvider>().fetchPatients();
+      context.read<FaskesProfileProvider>().fetchProfile(); // Tarik koordinat Faskes saat map dibuka
+    });
   }
 
-  Future<void> _refreshMarkers(List<PatientModel> patients) async {
+  Future<void> _refreshMarkers(List<PatientModel> patients, dynamic faskesProfile) async {
     Set<Marker> newMarkers = {};
     Map<String, List<PatientModel>> grouped = {};
 
-    // Kelompokkan pasien di koordinat yang sama persis
     for (var p in patients) {
       String key = "${p.latitude}_${p.longitude}";
       grouped.putIfAbsent(key, () => []).add(p);
@@ -50,16 +51,12 @@ class _AdminMapPageState extends State<AdminMapPage> {
       var centerPos = LatLng(group.first.latitude!, group.first.longitude!);
 
       if (group.length > 1) {
-        // --- JIKA LEBIH DARI 1 ORANG (TERTUMPUK) ---
-        
         if (_expandedClusterKey == entry.key) {
-          // STATE 2: SEDANG MEKAR (FANNED OUT)
           int count = group.length;
           
           for (int i = 0; i < count; i++) {
-            // 1. PERLEBAR SUDUT BENTANGAN (Agar tidak dempet)
-            double totalSpan = (count - 1) * 45.0; // Jarak antar pin dilebarkan dari 35 ke 45
-            if (totalSpan > 160.0) totalSpan = 160.0; // Maksimal mekar 160 derajat (hampir lurus)
+            double totalSpan = (count - 1) * 45.0; 
+            if (totalSpan > 160.0) totalSpan = 160.0; 
             
             double startAngle = -totalSpan / 2;
             double step = totalSpan / (count - 1);
@@ -70,45 +67,34 @@ class _AdminMapPageState extends State<AdminMapPage> {
             Color color = p.status.toLowerCase().contains('sembuh') ? Colors.green : (p.status.toLowerCase().contains('drop') ? Colors.red : const Color(0xFF1060EF));
 
             final icon = await MarkerGenerator.createFannedMarker(
-              text: initial, 
-              color: color, 
-              angleDegrees: currentAngle,
-              stemLength: 95.0, // 2. PANJANGKAN TANGKAI: Pin mekar lebih panjang agar menjauh dari pusat
+              text: initial, color: color, angleDegrees: currentAngle, stemLength: 95.0, 
             );
 
             newMarkers.add(
               Marker(
                 markerId: MarkerId('${entry.key}_$i'),
-                position: centerPos, 
-                anchor: const Offset(0.5, 1.0), 
-                icon: icon,
-                // 3. PRIORITAS Z-INDEX: Memastikan yang di tengah/klik terakhir berada di paling atas lapisannya
+                position: centerPos, anchor: const Offset(0.5, 1.0), icon: icon,
                 zIndex: (100 - (currentAngle.abs())).toDouble(), 
                 onTap: () => _showSinglePatientPopup(p), 
               )
             );
           }
         } else {
-          // STATE 1: MENGUMPUL JADI SATU (MENAMPILKAN ANGKA)
           final icon = await MarkerGenerator.createFannedMarker(
             text: "${group.length}", color: Colors.orange.shade700, angleDegrees: 0, isClusterParent: true
           );
           
           newMarkers.add(
             Marker(
-              markerId: MarkerId(entry.key),
-              position: centerPos,
-              anchor: const Offset(0.5, 1.0),
-              icon: icon,
+              markerId: MarkerId(entry.key), position: centerPos, anchor: const Offset(0.5, 1.0), icon: icon,
               onTap: () {
                 _mapController?.animateCamera(CameraUpdate.newLatLngZoom(centerPos, 16.5));
-                setState(() => _expandedClusterKey = entry.key); // Trigger mekar ke state 2
+                setState(() => _expandedClusterKey = entry.key); 
               },
             )
           );
         }
       } else {
-        // --- JIKA HANYA 1 ORANG (NORMAL) ---
         var p = group.first;
         String initial = p.fullName.isNotEmpty ? p.fullName[0].toUpperCase() : 'U';
         Color color = p.status.toLowerCase().contains('sembuh') ? Colors.green : (p.status.toLowerCase().contains('drop') ? Colors.red : const Color(0xFF1060EF));
@@ -116,14 +102,31 @@ class _AdminMapPageState extends State<AdminMapPage> {
         final icon = await MarkerGenerator.createFannedMarker(text: initial, color: color, angleDegrees: 0);
         newMarkers.add(
           Marker(
-            markerId: MarkerId(entry.key),
-            position: centerPos,
-            anchor: const Offset(0.5, 1.0),
-            icon: icon,
+            markerId: MarkerId(entry.key), position: centerPos, anchor: const Offset(0.5, 1.0), icon: icon,
             onTap: () => _showSinglePatientPopup(p),
           )
         );
       }
+    }
+
+    // --- TAMBAHAN: MARKER KHUSUS UNTUK RUMAH SAKIT / FASKES ---
+    if (faskesProfile != null && faskesProfile.latitude != null && faskesProfile.longitude != null) {
+      final rsIcon = await MarkerGenerator.createFannedMarker(
+        text: "RS", 
+        color: Colors.teal.shade700, // Warna hijau toska khas medis
+        angleDegrees: 0,
+      );
+
+      newMarkers.add(
+        Marker(
+          markerId: const MarkerId('faskes_utama'),
+          position: LatLng(faskesProfile.latitude!, faskesProfile.longitude!),
+          anchor: const Offset(0.5, 1.0),
+          icon: rsIcon,
+          zIndex: 999, // Pastikan pin RS selalu berada di lapisan teratas
+          infoWindow: const InfoWindow(title: "Lokasi Anda (Faskes)"),
+        )
+      );
     }
 
     if (mounted) setState(() => _currentMarkers = newMarkers);
@@ -132,7 +135,6 @@ class _AdminMapPageState extends State<AdminMapPage> {
   void _showSinglePatientPopup(PatientModel patient) {
     _mapController?.animateCamera(CameraUpdate.newLatLng(LatLng(patient.latitude!, patient.longitude!)));
     
-    // Gunakan BottomSheet bawaan Flutter untuk menampilkan ringkasan mini
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.white,
@@ -169,8 +171,8 @@ class _AdminMapPageState extends State<AdminMapPage> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1060EF), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),
                 onPressed: () {
-                  Navigator.pop(context); // Tutup popup mini
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => UserMapDetailPage(patient: patient))); // Buka detail penuh
+                  Navigator.pop(context); 
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => UserMapDetailPage(patient: patient))); 
                 },
                 child: const Text('Lihat Detail Pengguna', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
@@ -196,15 +198,16 @@ class _AdminMapPageState extends State<AdminMapPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Consumer<PatientProvider>(
-        builder: (context, provider, child) {
-          final filteredPatients = _getFilteredPatients(provider.patients);
+      // --- PERUBAHAN: Gunakan Consumer2 untuk memantau Patient DAN Faskes sekaligus ---
+      body: Consumer2<PatientProvider, FaskesProfileProvider>(
+        builder: (context, patientProv, faskesProv, child) {
+          final filteredPatients = _getFilteredPatients(patientProv.patients);
+          final profile = faskesProv.profile;
           
-          // Render jika data berubah ATAU ketika animasi mekar dipicu
-          String currentHash = '${filteredPatients.length}_$_expandedClusterKey';
+          String currentHash = '${filteredPatients.length}_${_expandedClusterKey}_${profile?.latitude}';
           if (_lastDataHash != currentHash) {
             _lastDataHash = currentHash;
-            _refreshMarkers(filteredPatients);
+            _refreshMarkers(filteredPatients, profile); // Masukkan profil ke dalam generator marker
           }
 
           return Stack(
@@ -212,18 +215,17 @@ class _AdminMapPageState extends State<AdminMapPage> {
               GoogleMap(
                 initialCameraPosition: _initialPosition,
                 markers: _currentMarkers,
-                myLocationEnabled: true,
+                // --- PERUBAHAN: Matikan pelacakan GPS fisik bawaan HP ---
+                myLocationEnabled: false, 
                 myLocationButtonEnabled: false,
                 zoomControlsEnabled: false,
                 onMapCreated: (controller) => _mapController = controller,
                 padding: const EdgeInsets.only(bottom: 240, top: 120),
-                // Jika klik area laut/kosong, tutup kipasan titiknya
                 onTap: (_) {
                   if (_expandedClusterKey != null) setState(() => _expandedClusterKey = null);
                 }, 
               ),
 
-              // Search & Filter
               Positioned(
                 top: 50, left: 16, right: 16,
                 child: Column(
@@ -257,7 +259,6 @@ class _AdminMapPageState extends State<AdminMapPage> {
                 ),
               ),
 
-              // Action Buttons
               Positioned(
                 top: 155, right: 16,
                 child: Column(
@@ -265,37 +266,29 @@ class _AdminMapPageState extends State<AdminMapPage> {
                     FloatingActionButton.small(
                       heroTag: "btnLoc",
                       backgroundColor: Colors.white,
-                      onPressed: () async {
-                        // Munculkan tulisan loading kecil di bawah
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Mencari lokasi Anda...'), duration: Duration(seconds: 1))
-                        );
-                        
-                        try {
-                          // Ambil lokasi asli GPS HP Admin
-                          Position position = await Geolocator.getCurrentPosition(
-                            desiredAccuracy: LocationAccuracy.high
-                          );
-                          
-                          // Terbangkan kamera ke lokasi tersebut dengan zoom lebih dekat (15.0)
-                          _mapController?.animateCamera(CameraUpdate.newLatLngZoom(
-                            LatLng(position.latitude, position.longitude), 15.0
-                          ));
-                        } catch (e) {
+                      onPressed: () {
+                        // --- PERUBAHAN: Terbang ke kordinat Profil Faskes, bukan koordinat HP ---
+                        if (profile != null && profile.latitude != null && profile.longitude != null) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Gagal mendapatkan lokasi. Pastikan GPS menyala.'), backgroundColor: Colors.red)
+                            const SnackBar(content: Text('Kembali ke lokasi Faskes...'), duration: Duration(seconds: 1))
+                          );
+                          _mapController?.animateCamera(CameraUpdate.newLatLngZoom(
+                            LatLng(profile.latitude!, profile.longitude!), 15.0
+                          ));
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Lokasi Faskes belum diatur di Profil.'), backgroundColor: Colors.red)
                           );
                         }
                       },
                       child: const Icon(Icons.my_location_rounded, color: Colors.black87),
                     ),
                     const SizedBox(height: 12),
-                    FloatingActionButton.small(heroTag: "btnRef", backgroundColor: Colors.white, onPressed: () { provider.fetchPatients(); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sinkronisasi data...'))); }, child: const Icon(Icons.refresh_rounded, color: Color(0xFF1060EF))),
+                    FloatingActionButton.small(heroTag: "btnRef", backgroundColor: Colors.white, onPressed: () { patientProv.fetchPatients(); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sinkronisasi data...'))); }, child: const Icon(Icons.refresh_rounded, color: Color(0xFF1060EF))),
                   ],
                 ),
               ),
 
-              // Bottom Sheet Daftar Semua Pasien (Import dari widget terpisah)
               MapBottomSheet(
                 patients: filteredPatients,
                 onPatientTap: (patient) => _showSinglePatientPopup(patient),
@@ -315,7 +308,7 @@ class _AdminMapPageState extends State<AdminMapPage> {
         onTap: () {
           setState(() {
             _selectedFilter = label;
-            _expandedClusterKey = null; // Tutup kipasan saat ganti filter
+            _expandedClusterKey = null; 
           });
         },
         borderRadius: BorderRadius.circular(20),
