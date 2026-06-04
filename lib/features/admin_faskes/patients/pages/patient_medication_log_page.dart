@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../models/patient_model.dart';
+import '../providers/patient_provider.dart';
 
 class PatientMedicationLogPage extends StatefulWidget {
   final PatientModel patient;
@@ -14,43 +16,30 @@ class PatientMedicationLogPage extends StatefulWidget {
 class _PatientMedicationLogPageState extends State<PatientMedicationLogPage> {
   DateTime _selectedDate = DateTime.now();
 
-  // --- DUMMY DATA ---
-  // Nanti data ini akan digantikan dari API C#
-  final Map<String, List<Map<String, dynamic>>> _dummyMedications = {
-    DateFormat('yyyy-MM-dd').format(DateTime.now()): [
-      {
-        "medicationName": "Rifampisin (150mg)",
-        "scheduledTime": "07:00",
-        "status": "taken", // taken, pending, missed
-        "takenTime": "07:05",
-      },
-      {
-        "medicationName": "Isoniazid (75mg)",
-        "scheduledTime": "19:00",
-        "status": "pending",
-        "takenTime": null,
-      }
-    ],
-    DateFormat('yyyy-MM-dd').format(DateTime.now().subtract(const Duration(days: 1))): [
-      {
-        "medicationName": "Rifampisin (150mg)",
-        "scheduledTime": "07:00",
-        "status": "taken",
-        "takenTime": "07:30",
-      },
-      {
-        "medicationName": "Ethambutol (400mg)",
-        "scheduledTime": "08:00",
-        "status": "missed",
-        "takenTime": null,
-      }
-    ]
-  };
+  @override
+  void initState() {
+    super.initState();
+    // Mengambil data obat saat halaman pertama kali dibuka berdasarkan tanggal hari ini
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchLogsForSelectedDate();
+    });
+  }
+
+  void _fetchLogsForSelectedDate() {
+    // Memanggil API melalui provider untuk mengambil data jadwal obat sesuai tanggal
+    context.read<PatientProvider>().fetchMedicationLogs(
+      widget.patient.id.toString(), 
+      _selectedDate
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    String dateKey = DateFormat('yyyy-MM-dd').format(_selectedDate);
-    List<Map<String, dynamic>> dailyLogs = _dummyMedications[dateKey] ?? [];
+    // Mendengarkan perubahan data di Provider
+    final provider = context.watch<PatientProvider>();
+    final isLoading = provider.isLoading;
+    final dailyLogs = provider.medicationLogs;
+    final complianceRate = provider.complianceRate;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -72,20 +61,21 @@ class _PatientMedicationLogPageState extends State<PatientMedicationLogPage> {
             ),
             child: Row(
               children: [
-                // Circular Chart (Simulasi)
+                // Circular Chart (Sudah Dinamis)
                 Stack(
                   alignment: Alignment.center,
                   children: [
                     SizedBox(
                       width: 70, height: 70,
                       child: CircularProgressIndicator(
-                        value: 0.92, // 92% Dummy
+                        value: complianceRate, 
                         strokeWidth: 8,
                         backgroundColor: Colors.grey.shade100,
-                        color: Colors.green,
+                        // Berubah warna jika kepatuhan di bawah 50%
+                        color: complianceRate < 0.5 ? Colors.red : (complianceRate < 0.8 ? Colors.orange : Colors.green),
                       ),
                     ),
-                    const Text('92%', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text('${(complianceRate * 100).toInt()}%', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   ],
                 ),
                 const SizedBox(width: 24),
@@ -95,8 +85,11 @@ class _PatientMedicationLogPageState extends State<PatientMedicationLogPage> {
                     children: [
                       Text(widget.patient.fullName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
-                      Text('Tingkat kepatuhan sangat baik. Pastikan Aan terus menjaga jadwal minum obatnya.', 
-                        style: TextStyle(color: Colors.grey.shade600, fontSize: 12, height: 1.4)),
+                      // Teks "Aan" sudah diganti jadi dinamis!
+                      Text(
+                        'Pastikan ${widget.patient.fullName} terus menjaga jadwal minum obatnya agar pengobatan berjalan lancar.', 
+                        style: TextStyle(color: Colors.grey.shade600, fontSize: 12, height: 1.4)
+                      ),
                     ],
                   ),
                 )
@@ -115,10 +108,13 @@ class _PatientMedicationLogPageState extends State<PatientMedicationLogPage> {
               itemCount: 7,
               itemBuilder: (context, index) {
                 DateTime date = DateTime.now().subtract(Duration(days: index));
-                bool isSelected = DateFormat('yyyy-MM-dd').format(date) == dateKey;
+                bool isSelected = DateFormat('yyyy-MM-dd').format(date) == DateFormat('yyyy-MM-dd').format(_selectedDate);
                 
                 return GestureDetector(
-                  onTap: () => setState(() => _selectedDate = date),
+                  onTap: () {
+                    setState(() => _selectedDate = date);
+                    _fetchLogsForSelectedDate(); // Fetch ulang data ke C# saat ganti hari
+                  },
                   child: Container(
                     width: 60,
                     margin: EdgeInsets.only(left: 8, right: index == 0 ? 16 : 8),
@@ -144,24 +140,28 @@ class _PatientMedicationLogPageState extends State<PatientMedicationLogPage> {
 
           // --- 3. TIMELINE OBAT ---
           Expanded(
-            child: dailyLogs.isEmpty 
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.event_busy_rounded, size: 48, color: Colors.grey.shade300),
-                      const SizedBox(height: 12),
-                      Text('Tidak ada jadwal obat\nuntuk tanggal ini.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade500)),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: dailyLogs.length,
-                  itemBuilder: (context, index) {
-                    final log = dailyLogs[index];
-                    return _buildMedicationCard(log);
-                  },
+            child: isLoading 
+              ? const Center(child: CircularProgressIndicator()) 
+              : (dailyLogs.isEmpty 
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.event_busy_rounded, size: 48, color: Colors.grey.shade300),
+                          const SizedBox(height: 12),
+                          Text('Tidak ada jadwal obat\nuntuk tanggal ini.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade500)),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      itemCount: dailyLogs.length,
+                      itemBuilder: (context, index) {
+                        // Cast data dinamis dari map
+                        final log = dailyLogs[index] as Map<String, dynamic>;
+                        return _buildMedicationCard(log);
+                      },
+                    )
                 ),
           )
         ],
@@ -175,7 +175,14 @@ class _PatientMedicationLogPageState extends State<PatientMedicationLogPage> {
     
     Color statusColor = isTaken ? Colors.green : (isMissed ? Colors.red : Colors.orange);
     IconData statusIcon = isTaken ? Icons.check_circle_rounded : (isMissed ? Icons.cancel_rounded : Icons.schedule_rounded);
-    String statusText = isTaken ? 'Diminum ${log['takenTime']} WIB' : (isMissed ? 'Terlewat' : 'Belum Waktunya');
+    
+    // Teks dimodifikasi agar tahan terhadap tipe null
+    String statusText = 'Belum Waktunya';
+    if (isTaken) {
+      statusText = 'Diminum ${log['takenTime']} WIB';
+    } else if (isMissed) {
+      statusText = 'Terlewat';
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -199,7 +206,7 @@ class _PatientMedicationLogPageState extends State<PatientMedicationLogPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(log['medicationName'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(log['medicationName'] ?? '-', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 4),
                 Text('Jadwal: ${log['scheduledTime']} WIB', style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
               ],

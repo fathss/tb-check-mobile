@@ -19,7 +19,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   String userName = "Memuat...";
   String userEmail = "memuat.data@email.com";
   String initial = "U";
-  String userFase = "Memuat data..."; // Variabel baru untuk Rapor Pengobatan
+  String userFase = "Memuat data..."; 
+  bool isRegistered = false; // --- Variabel baru untuk mengecek status Faskes ---
 
   @override
   void initState() {
@@ -48,8 +49,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             if (userName.isNotEmpty) initial = userName[0].toUpperCase();
             if (email != null) userEmail = email;
             
-            // Set fase pengobatan (Jika null, berarti belum didaftarkan oleh Faskes)
-            userFase = summary.patientId != null ? summary.fase : "Belum Terdaftar di Faskes";
+            // Logika pengecekan terdaftar di Faskes atau belum
+            isRegistered = summary.patientId != null;
+            userFase = isRegistered ? summary.fase : "Belum Terdaftar di Faskes";
             
             isLoading = false;
           });
@@ -59,6 +61,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           setState(() {
             userName = "Pengguna TBCheck";
             userFase = "Belum Terdaftar di Faskes";
+            isRegistered = false;
             isLoading = false;
           });
         }
@@ -159,27 +162,29 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
                     
-                    // --- PROGRESS BAR 180 HARI ---
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text("Total Perjalanan", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey.shade700)),
-                        // TODO: Angka 45 ini sementara, nanti kita ambil selisih hari dari API C# (DiagnosisDate)
-                        const Text("45 / 180 Hari", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary)), 
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: LinearProgressIndicator(
-                        value: 45 / 180, // Progress statis sementara untuk UI
-                        minHeight: 10,
-                        backgroundColor: Colors.grey.shade300,
-                        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                    // --- PROGRESS BAR HANYA MUNCUL JIKA TERDAFTAR ---
+                    if (isRegistered) ...[
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text("Total Perjalanan", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey.shade700)),
+                          // TODO: Angka statis sementara
+                          const Text("45 / 180 Hari", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary)), 
+                        ],
                       ),
-                    ),
+                      const SizedBox(height: 12),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: LinearProgressIndicator(
+                          value: 45 / 180, // Progress statis sementara untuk UI
+                          minHeight: 10,
+                          backgroundColor: Colors.grey.shade300,
+                          valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -211,7 +216,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 title: "Keluar",
                 isDestructive: true,
                 onTap: () async {
-                  // 1. Beri nama berbeda pada context dialog (dialogContext) agar tidak bentrok
+                  // Beri nama berbeda pada context dialog agar tidak bentrok
                   bool? confirm = await showDialog(
                     context: context,
                     builder: (dialogContext) => AlertDialog(
@@ -232,7 +237,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     await storage.clearSession();
                     
                     if (context.mounted) {
-                      // 2. Gunakan rootNavigator: true untuk memaksa navigasi dari lapisan paling luar
+                      // Gunakan rootNavigator: true untuk memaksa navigasi dari lapisan paling luar
                       Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                         MaterialPageRoute(builder: (context) => const LandingPage()), 
                         (route) => false,

@@ -7,7 +7,6 @@ import '../../map_tracking/models/location_history_model.dart';
 import 'package:tbcheck_app/features/auth/data/datasources/auth_storage.dart';
 
 class PatientProvider with ChangeNotifier {
-  // DEFINISIKAN AUTH STORAGE DI SINI UNTUK MENGATASI ERROR UNDEFINED
   final AuthStorage _authStorage = AuthStorage();
 
   bool _isLoading = false;
@@ -16,16 +15,19 @@ class PatientProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  // --- KEMBALIKAN VARIABEL PATIENTS DI SINI ---
   List<PatientModel> _patients = [];
   List<PatientModel> get patients => _patients;
-  // --------------------------------------------
 
-  // --- TAMBAHAN UNTUK RIWAYAT LOKASI ---
   List<LocationHistoryModel> _locationHistories = [];
   List<LocationHistoryModel> get locationHistories => _locationHistories;
 
-  // Endpoint khusus untuk Patient
+    
+  double _complianceRate = 0.0;
+  List<dynamic> _medicationLogs = [];
+  
+  double get complianceRate => _complianceRate;
+  List<dynamic> get medicationLogs => _medicationLogs;
+
   final String _patientUrl = '${AppConstants.baseUrl}/Patient'; 
 
   Future<void> fetchPatients({String filterStatus = 'Semua', String searchQuery = ''}) async {
@@ -34,10 +36,19 @@ class PatientProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final token = await _authStorage.getToken(); // Tetap butuh token untuk keamanan
+      final token = await _authStorage.getToken(); 
+      // MENGAMBIL ID SECARA DINAMIS
+      final dynamicFaskesId = await _authStorage.getFaskesProfileId();
 
-      // KEMBALIKAN KE DEFAULT FASKES ID
-      String url = '$_patientUrl?faskesId=${AppConstants.defaultFaskesId}';
+      if (dynamicFaskesId == null || dynamicFaskesId.isEmpty) {
+        _errorMessage = 'Akun ini belum tertaut dengan Faskes.';
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+
+      // GUNAKAN ID DINAMIS DI URL
+      String url = '$_patientUrl?faskesId=$dynamicFaskesId';
       
       if (filterStatus != 'Semua') {
         url += '&status=${Uri.encodeComponent(filterStatus)}';
@@ -95,7 +106,6 @@ class PatientProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // Format DateTime menjadi string yyyy-MM-dd agar cocok dengan backend C#
       String formattedDate = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
       
       final url = '${AppConstants.baseUrl}/Patient/$patientId/locations?date=$formattedDate';
@@ -115,9 +125,6 @@ class PatientProvider with ChangeNotifier {
     }
   }
 
-  // ========================================================
-  // 2. FUNGSI PENCARIAN USER UNTUK ASSIGN (BARU)
-  // ========================================================
   Future<Map<String, dynamic>?> findUserByNik(String nik) async {
     _isLoading = true;
     _errorMessage = null;
@@ -153,9 +160,6 @@ class PatientProvider with ChangeNotifier {
     }
   }
 
-  // ========================================================
-  // 3. FUNGSI CREATE PATIENT 
-  // ========================================================
   Future<bool> createPatient({
     required String nik,
     required String fullName,
@@ -172,9 +176,11 @@ class PatientProvider with ChangeNotifier {
     try {
       final userId = await _authStorage.getUserId();
       final token = await _authStorage.getToken();
+      // MENGAMBIL ID FASKES DINAMIS
+      final dynamicFaskesId = await _authStorage.getFaskesProfileId();
 
-      if (userId == null || token == null) {
-        _errorMessage = "Sesi tidak valid. Silakan login kembali.";
+      if (userId == null || token == null || dynamicFaskesId == null) {
+        _errorMessage = "Sesi/Faskes tidak valid. Silakan login kembali.";
         _isLoading = false;
         notifyListeners();
         return false;
@@ -190,7 +196,8 @@ class PatientProvider with ChangeNotifier {
         "latitude": latitude,
         "longitude": longitude,
         "address": address,
-        "faskesProfileId": AppConstants.defaultFaskesId 
+        // GUNAKAN ID DINAMIS SAAT INSERT
+        "faskesProfileId": dynamicFaskesId 
       };
 
       final response = await http.post(
@@ -203,7 +210,6 @@ class PatientProvider with ChangeNotifier {
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        // Otomatis refresh daftar pasien setelah berhasil input/assign
         await fetchPatients();
         _isLoading = false;
         notifyListeners();
@@ -223,9 +229,6 @@ class PatientProvider with ChangeNotifier {
     }
   }
 
-  // ========================================================
-  // 4. FUNGSI HAPUS PASIEN
-  // ========================================================
   Future<bool> deletePatient(String patientId) async {
     _isLoading = true;
     _errorMessage = null;
@@ -244,7 +247,6 @@ class PatientProvider with ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
-        // Jika berhasil dihapus, perbarui daftar pasien agar yang dihapus hilang dari layar
         await fetchPatients(); 
         _isLoading = false;
         notifyListeners();
@@ -261,6 +263,48 @@ class PatientProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return false;
+    }
+  }
+
+  // ========================================================
+  // FUNGSI PENGAMBILAN LOG KEPATUHAN MINUM OBAT
+  // ========================================================
+
+  Future<void> fetchMedicationLogs(String patientId, DateTime date) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final token = await _authStorage.getToken();
+      
+      // Format tanggal menjadi yyyy-MM-dd
+      String formattedDate = "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+      
+      final url = '${AppConstants.baseUrl}/Patient/$patientId/medication-logs?date=$formattedDate';
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        
+        // C# mereturn JSON { "complianceRate": 0.92, "logs": [...] }
+        _complianceRate = (data['complianceRate'] ?? 0.0).toDouble();
+        _medicationLogs = data['logs'] ?? [];
+      } else {
+        _errorMessage = 'Gagal memuat riwayat obat';
+      }
+    } catch (e) {
+      _errorMessage = 'Terjadi kesalahan jaringan: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 }

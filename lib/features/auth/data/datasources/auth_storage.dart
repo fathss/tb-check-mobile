@@ -20,6 +20,7 @@ class AuthStorage {
   final _emailKey = 'user_email';
   final _roleKey = 'user_role';
   final _landingSeenKey = 'landing_seen';
+  final _faskesProfileIdKey = 'faskes_profile_id';
 
   // Simpan token saat berhasil login
   Future<void> saveToken(String token) async {
@@ -29,6 +30,14 @@ class AuthStorage {
   // Ambil token untuk disuntikkan ke Header API
   Future<String?> getToken() async {
     return await _storage.read(key: _tokenKey);
+  }
+
+  Future<void> saveFaskesProfileId(String id) async {
+    await _storage.write(key: _faskesProfileIdKey, value: id);
+  }
+
+  Future<String?> getFaskesProfileId() async {
+    return await _storage.read(key: _faskesProfileIdKey);
   }
 
   Future<bool> hasValidToken() async {
@@ -83,5 +92,6 @@ class AuthStorage {
     await _storage.delete(key: _roleKey);
     await _storage.delete(key: _userIdKey);
     await _storage.delete(key: _emailKey);
+    await _storage.delete(key: _faskesProfileIdKey);
   }
 }

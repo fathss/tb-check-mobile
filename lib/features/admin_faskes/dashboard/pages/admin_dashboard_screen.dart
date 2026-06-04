@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 import '../providers/dashboard_provider.dart';
 import '../../patients/providers/patient_provider.dart'; 
+import '../../profile/providers/faskes_profile_provider.dart';
 
 // Import halaman form manual dan form assign
 import 'package:tbcheck_app/features/admin_faskes/patients/pages/patient_form_page.dart';
@@ -22,6 +23,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<DashboardProvider>().fetchDashboardData();
       context.read<PatientProvider>().fetchPatients(); 
+      context.read<FaskesProfileProvider>().fetchProfile(); // <--- Tambahkan ini
     });
   }
 
@@ -29,9 +31,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget build(BuildContext context) {
     final dashboardProvider = context.watch<DashboardProvider>();
     final patientProvider = context.watch<PatientProvider>();
+    final faskesProvider = context.watch<FaskesProfileProvider>(); // <--- Tambahkan ini
     
-    final bool isLoading = dashboardProvider.isLoading || patientProvider.isLoading;
+    final bool isLoading = dashboardProvider.isLoading || patientProvider.isLoading || faskesProvider.isLoading;
     final bool hasError = dashboardProvider.errorMessage != null;
+
+    // Ambil nama Faskes dari provider, berikan nilai default jika null
+    final String faskesName = faskesProvider.profile?.name ?? 'Memuat Faskes...';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA), 
@@ -49,12 +55,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               child: const Icon(Icons.radar, color: Color(0xFF1060EF), size: 24),
             ),
             const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Tim Surveilans', style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w500)),
-                const Text('PKM Perak Timur', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
-              ],
+            Expanded( // <--- Tambahkan Expanded agar teks panjang tidak overflow
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    faskesName, 
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
+                    maxLines: 1, // Batasi 1 baris
+                    overflow: TextOverflow.ellipsis, // Tambahkan '...' jika teks terlalu panjang
+                  ),
+                ],
+              ),
             ),
           ],
         ),

@@ -3,19 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:provider/provider.dart' hide Provider; 
 import 'package:tbcheck_app/features/medicine/providers/medicine_provider.dart';
 import 'package:tbcheck_app/features/user_profile/presentation/controllers/user_profile_controller.dart';
-// Wajib import auth_storage untuk mengambil ID dinamis
 import 'package:tbcheck_app/features/auth/data/datasources/auth_storage.dart';
-import '../notifications/notification_page.dart'; // Sesuaikan path-nya
+import '../notifications/notification_page.dart'; 
 
 class HomePage extends ConsumerStatefulWidget {
-  const HomePage({super.key});
+  final VoidCallback? onProfileTap; 
+  
+  const HomePage({super.key, this.onProfileTap});
 
   @override
   ConsumerState<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
-  // 1. Ubah variabel ID menjadi null dan dinamis
   String? currentUserId; 
 
   @override
@@ -24,7 +24,6 @@ class _HomePageState extends ConsumerState<HomePage> {
     _loadUserId();
   }
 
-  // 2. Fungsi untuk mengambil ID dari penyimpanan lokal
   Future<void> _loadUserId() async {
     final storage = ref.read(authStorageProvider);
     final id = await storage.getUserId();
@@ -37,7 +36,6 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // Tampilkan layar kosong/loading jika ID belum didapat dari storage
     if (currentUserId == null) {
       return const Scaffold(
         backgroundColor: Color(0xFFF8F9FA),
@@ -66,7 +64,6 @@ class _HomePageState extends ConsumerState<HomePage> {
             children: [
               const SizedBox(height: 20),
 
-              // --- 1. HEADER & CARD DINAMIS ---
               homeSummaryAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, stack) => Text('Error: $error', style: const TextStyle(color: Colors.red)),
@@ -74,11 +71,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                   final String namaDepan = summary.fullName.split(" ").first;
                   final String inisial = summary.fullName.isNotEmpty ? summary.fullName[0].toUpperCase() : "A";
                   
-                  // KONDISIONAL 1: Subtitle & Teks Progress (Pendekatan Harian)
                   final int persentase = (medicineProvider.progressPercentage * 100).toInt();
                   String sapaanSubtitle = "Waktunya Pulih";
                   
-                  // Narasi diubah menjadi fokus harian (Mikro)
                   String teksProgress = "Kamu telah menyelesaikan $persentase% dari\njadwal obatmu hari ini. Terus semangat!";
 
                   if (summary.patientId == null) {
@@ -97,10 +92,14 @@ class _HomePageState extends ConsumerState<HomePage> {
                         children: [
                           Row(
                             children: [
-                              CircleAvatar(
-                                radius: 26,
-                                backgroundColor: const Color(0xFFE9F0FF),
-                                child: Text(inisial, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1060EF))),
+                              InkWell(
+                                onTap: widget.onProfileTap, 
+                                borderRadius: BorderRadius.circular(50),
+                                child: CircleAvatar(
+                                  radius: 26,
+                                  backgroundColor: const Color(0xFFE9F0FF),
+                                  child: Text(inisial, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1060EF))),
+                                ),
                               ),
                               const SizedBox(width: 16),
                               Column(
@@ -114,7 +113,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                             ],
                           ),
                           
-                          // --- TOMBOL NOTIFIKASI YANG SUDAH BISA DIKLIK ---
                           InkWell(
                             onTap: () {
                               Navigator.push(
@@ -154,14 +152,24 @@ class _HomePageState extends ConsumerState<HomePage> {
                                 ),
                                 const SizedBox(height: 20),
                                 Text(teksProgress, style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.4, fontWeight: FontWeight.w500)),
-                                const SizedBox(height: 20),
-                                // Menampilkan "X / Y Obat Hari Ini"
-                                Text("${medicineProvider.dosisSelesai} / ${medicineProvider.totalDosis} Obat Hari Ini", style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 12),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: LinearProgressIndicator(value: medicineProvider.progressPercentage, minHeight: 10, backgroundColor: Colors.white.withOpacity(0.3), valueColor: const AlwaysStoppedAnimation<Color>(Colors.white)),
-                                ),
+                                
+                                // --- PERUBAHAN ADA DI SINI ---
+                                // Hanya tampilkan indikator obat HARI INI jika pasien terdaftar
+                                if (summary.patientId != null) ...[
+                                  const SizedBox(height: 20),
+                                  Text("${medicineProvider.dosisSelesai} / ${medicineProvider.totalDosis} Obat Hari Ini", style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 12),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: LinearProgressIndicator(
+                                      value: medicineProvider.progressPercentage, 
+                                      minHeight: 10, 
+                                      backgroundColor: Colors.white.withOpacity(0.3), 
+                                      valueColor: const AlwaysStoppedAnimation<Color>(Colors.white)
+                                    ),
+                                  ),
+                                ]
+                                // ------------------------------
                               ],
                             ),
                           ),
@@ -177,14 +185,12 @@ class _HomePageState extends ConsumerState<HomePage> {
               const Text("Jadwal Hari ini", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
               const SizedBox(height: 16),
 
-              // --- 3. LIST JADWAL OBAT DINAMIS ---
               Expanded(
                 child: homeSummaryAsync.when(
                   loading: () => const Center(child: CircularProgressIndicator()),
                   error: (_, __) => const SizedBox(),
                   data: (summary) {
                     
-                    // KONDISIONAL 2: Belum Terdaftar
                     if (summary.patientId == null) {
                       return Center(
                         child: Column(
@@ -202,7 +208,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                     
                     if (medicineProvider.isLoading) return const Center(child: CircularProgressIndicator());
                     
-                    // KONDISIONAL 3: Jadwal Kosong
                     if (medicineProvider.todaySchedules.isEmpty) {
                       return Center(
                         child: Column(
@@ -218,12 +223,10 @@ class _HomePageState extends ConsumerState<HomePage> {
                       );
                     }
                     
-                    // KONDISIONAL 4: Cek apakah semua obat sudah diminum
                     bool isAllDone = medicineProvider.todaySchedules.every((s) => s.isDone);
 
                     return Column(
                       children: [
-                        // Banner Apresiasi jika semua beres
                         if (isAllDone)
                           Container(
                             margin: const EdgeInsets.only(bottom: 16),
@@ -238,7 +241,6 @@ class _HomePageState extends ConsumerState<HomePage> {
                             ),
                           ),
                         
-                        // List Obat
                         Expanded(
                           child: ListView.separated(
                             physics: const BouncingScrollPhysics(),

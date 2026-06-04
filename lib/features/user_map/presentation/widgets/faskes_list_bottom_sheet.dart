@@ -4,6 +4,10 @@ import 'package:tbcheck_app/features/user_map/data/models/faskes_model.dart';
 import 'package:tbcheck_app/features/user_map/presentation/widgets/faskes_card.dart';
 import 'package:tbcheck_app/features/user_map/presentation/widgets/faskes_detail_bottom_sheet.dart';
 
+// --- IMPORT DUA PACKAGE INI ---
+import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
+
 class FaskesListBottomSheet extends StatefulWidget {
   final List<FaskesWithDistance> faskesWithDistance;
   final Future<void> Function(Faskes faskes) onFaskesTap;
@@ -67,9 +71,7 @@ class _FaskesListBottomSheetState extends State<FaskesListBottomSheet> {
     widget.onClose();
   }
 
-  /// Public method to select and show detail for a faskes
   Future<void> selectFaskes(Faskes faskes) async {
-    // Find the distance for this faskes
     double? distance;
     for (var item in widget.faskesWithDistance) {
       if (item.faskes.id == faskes.id) {
@@ -92,6 +94,33 @@ class _FaskesListBottomSheetState extends State<FaskesListBottomSheet> {
     }
   }
 
+  // --- FUNGSI UNTUK MENELEPON ---
+  Future<void> _launchPhoneApp(String phoneNumber) async {
+    // Bersihkan karakter selain angka dan + dari nomor telepon
+    final cleanPhone = phoneNumber.replaceAll(RegExp(r'[^0-9+]'), '');
+    final Uri url = Uri.parse('tel:$cleanPhone');
+    
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tidak dapat membuka aplikasi telepon')),
+        );
+      }
+    }
+  }
+
+  // --- FUNGSI UNTUK SHARE LOKASI ---
+  void _shareFaskes(Faskes faskes) {
+    // Menggunakan URL standar Google Maps Search
+    final String mapsLink = "https://www.google.com/maps/search/?api=1&query=${faskes.posisi.latitude},${faskes.posisi.longitude}";
+    final String phoneText = faskes.emergencyContact ?? "Tidak tersedia";
+    final String shareText = "Puskesmas/RS Rujukan TB: *${faskes.nama}*\n\nAlamat: ${faskes.lokasi}\nTelepon: $phoneText\n\n📍 Buka di Maps: $mapsLink";
+    
+    Share.share(shareText);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isDetailOpen && _selectedFaskes != null) {
@@ -99,14 +128,26 @@ class _FaskesListBottomSheetState extends State<FaskesListBottomSheet> {
         key: _detailSheetKey,
         faskesName: _selectedFaskes!.nama,
         address: _selectedFaskes!.lokasi,
-        distance:
-            'Berjarak ${_formatDistance(_selectedDistance!)} dari lokasimu',
+        distance: 'Berjarak ${_formatDistance(_selectedDistance!)} dari lokasimu',
         openingHours: _selectedFaskes!.status,
         isOpen: _selectedFaskes!.isOpen,
         initialSize: _detailInitialSize,
         onRoutePressed: () => widget.onRouteRequested(_selectedFaskes!),
-        onPhonePressed: () {},
-        onSharePressed: () {},
+        
+        // --- LOGIKA TOMBOL TELEPON & SHARE ---
+        onPhonePressed: () {
+          final phone = _selectedFaskes!.emergencyContact;
+          if (phone != null && phone.isNotEmpty && phone != "-") {
+            _launchPhoneApp(phone);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Nomor telepon faskes tidak tersedia')),
+            );
+          }
+        },
+        onSharePressed: () => _shareFaskes(_selectedFaskes!),
+        // -------------------------------------
+        
         onClose: _handleDetailClose,
       );
     }
@@ -286,9 +327,9 @@ class _FaskesListBottomSheetState extends State<FaskesListBottomSheet> {
                       ),
                     ),
                   ],
-                ),
-        );
-      },
-    );
+                ), // Penutup ListView
+        ); // Penutup Container
+      }, // Penutup builder
+    ); // Penutup DraggableScrollableSheet
   }
 }

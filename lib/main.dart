@@ -22,6 +22,9 @@ import 'package:tbcheck_app/features/admin_faskes/dashboard/providers/dashboard_
 import 'package:tbcheck_app/features/admin_faskes/profile/providers/faskes_profile_provider.dart';
 import 'package:tbcheck_app/features/medicine/providers/medicine_provider.dart';
 
+// --- IMPORT NOTIFICATION PROVIDER BARU ---
+import 'package:tbcheck_app/features/notifications/providers/notification_provider.dart'; // Sesuaikan path jika berbeda
+
 Future<void> main() async {
   // 1. Load Environment Variables
   await dotenv.load(fileName: ".env");
@@ -58,6 +61,8 @@ Future<void> main() async {
           ChangeNotifierProvider(create: (_) => DashboardProvider()),
           ChangeNotifierProvider(create: (_) => FaskesProfileProvider()),
           ChangeNotifierProvider(create: (_) => MedicineProvider()),
+          // --- DAFTARKAN NOTIFICATION PROVIDER DI SINI ---
+          ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ],
         child: const MyApp(),
       ),

@@ -24,9 +24,20 @@ class FaskesProfileProvider with ChangeNotifier {
 
     try {
       final token = await _authStorage.getToken();
+      
+      // 1. Ambil ID Faskes secara dinamis dari storage yang baru saja kita buat
+      final dynamicFaskesId = await _authStorage.getFaskesProfileId();
+      
+      // 2. Jika admin ini tidak punya ID Faskes, langsung hentikan dan beri pesan
+      if (dynamicFaskesId == null || dynamicFaskesId.isEmpty) {
+         _errorMessage = 'Akun ini belum tertaut dengan Fasilitas Kesehatan mana pun.';
+         _isLoading = false;
+         notifyListeners();
+         return;
+      }
 
-      // KEMBALI MENGGUNAKAN DEFAULT FASKES ID DARI DATABASE
-      final url = '${AppConstants.baseUrl}/Faskes/${AppConstants.defaultFaskesId}';
+      // 3. Gunakan URL dinamis
+      final url = '${AppConstants.baseUrl}/Faskes/$dynamicFaskesId';
       
       final response = await http.get(
         Uri.parse(url),
@@ -49,13 +60,15 @@ class FaskesProfileProvider with ChangeNotifier {
     }
   }
 
-  // Mengirim data yang diubah ke C#
+  // LAKUKAN HAL YANG SAMA UNTUK FUNGSI UPDATE:
   Future<bool> updateProfile(Map<String, dynamic> updatedData) async {
     try {
       final token = await _authStorage.getToken();
+      final dynamicFaskesId = await _authStorage.getFaskesProfileId();
+      
+      if (dynamicFaskesId == null || dynamicFaskesId.isEmpty) return false;
 
-      // KEMBALI MENGGUNAKAN DEFAULT FASKES ID
-      final url = '${AppConstants.baseUrl}/Faskes/${AppConstants.defaultFaskesId}';
+      final url = '${AppConstants.baseUrl}/Faskes/$dynamicFaskesId';
       
       final response = await http.put(
         Uri.parse(url),
@@ -67,7 +80,7 @@ class FaskesProfileProvider with ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
-        await fetchProfile(); // Segarkan data setelah update berhasil
+        await fetchProfile();
         return true;
       }
       return false;

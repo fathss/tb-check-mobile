@@ -26,6 +26,15 @@ class AuthRepository {
       final decodedRole = JwtUtils.role(token);
 
       await _storage.saveToken(token);
+      
+      // =======================================================
+      // TANGKAP DAN SIMPAN ID FASKES DARI JSON BACKEND DI SINI
+      // =======================================================
+      if (data['faskesProfileId'] != null) {
+        await _storage.saveFaskesProfileId(data['faskesProfileId'].toString());
+      }
+      // =======================================================
+
       if (decodedUserId != null && decodedUserId.isNotEmpty) {
         await _storage.saveUserId(decodedUserId);
       }
