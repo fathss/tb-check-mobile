@@ -256,8 +256,29 @@ class _AddMedicinePageState extends ConsumerState<AddMedicinePage> {
                       );
                     },
                   ),
+                  // --- UBAH BAGIAN TOMBOL TAMBAH INI ---
                   GestureDetector(
-                    onTap: () { setState(() { controller.addConsumeTime(); }); },
+                    onTap: () async { 
+                      // 1. Langsung munculkan pemilih waktu saat "Tambah +" ditekan
+                      final TimeOfDay? pickedTime = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.now(),
+                      );
+                      
+                      // 2. Jika user memilih waktu (tidak tekan cancel)
+                      if (pickedTime != null) {
+                        final hour = pickedTime.hourOfPeriod.toString().padLeft(2, '0');
+                        final minute = pickedTime.minute.toString().padLeft(2, '0');
+                        final period = pickedTime.period == DayPeriod.am ? "AM" : "PM";
+                        
+                        setState(() { 
+                          // 3. Buat kotak biru baru
+                          controller.addConsumeTime(); 
+                          // 4. Langsung isi kotak terakhir yang baru dibuat dengan jam pilihan
+                          controller.consumeTimeControllers.last.text = "$hour:$minute $period";
+                        }); 
+                      }
+                    },
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       decoration: BoxDecoration(color: const Color(0xFFF4F6F9), borderRadius: BorderRadius.circular(16)),

@@ -20,7 +20,11 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   String userEmail = "memuat.data@email.com";
   String initial = "U";
   String userFase = "Memuat data..."; 
-  bool isRegistered = false; // --- Variabel baru untuk mengecek status Faskes ---
+  bool isRegistered = false; 
+  
+  // --- VARIABEL BARU UNTUK PROGRESS BAR ---
+  int currentDay = 0;
+  final int totalDays = 180; // Standar 6 bulan pengobatan TBC
 
   @override
   void initState() {
@@ -37,10 +41,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       final email = await storage.getEmail(); 
       
       try {
-        // Ambil data profil dasar
         final data = await repo.getProfile(userId);
-        
-        // Ambil data fase dari Home Summary untuk ditampilkan di Kartu Rapor
         final summary = await repo.getHomeSummary(userId);
         
         if (mounted) {
@@ -49,9 +50,30 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             if (userName.isNotEmpty) initial = userName[0].toUpperCase();
             if (email != null) userEmail = email;
             
-            // Logika pengecekan terdaftar di Faskes atau belum
             isRegistered = summary.patientId != null;
             userFase = isRegistered ? summary.fase : "Belum Terdaftar di Faskes";
+            
+            // --- LOGIKA HITUNG HARI (DINAMIS) ---
+            if (isRegistered) {
+              // Coba ambil tanggal diagnosis dari data profile
+              // Sesuaikan key 'diagnosisDate' dengan yang ada di JSON response API C#-mu
+              String? diagDateString = data['diagnosisDate']?.toString(); 
+              
+              if (diagDateString != null && diagDateString.isNotEmpty) {
+                try {
+                  DateTime diagDate = DateTime.parse(diagDateString);
+                  // Hitung selisih hari dari waktu diagnosis ke hari ini
+                  int diff = DateTime.now().difference(diagDate).inDays;
+                  
+                  currentDay = diff >= 0 ? diff : 0;
+                  // Jangan biarkan tembus di atas 180 hari
+                  if (currentDay > totalDays) currentDay = totalDays; 
+                } catch (e) {
+                  currentDay = 0;
+                }
+              }
+            }
+            // -------------------------------------
             
             isLoading = false;
           });
@@ -62,6 +84,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
             userName = "Pengguna TBCheck";
             userFase = "Belum Terdaftar di Faskes";
             isRegistered = false;
+            currentDay = 0;
             isLoading = false;
           });
         }
@@ -170,15 +193,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text("Total Perjalanan", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey.shade700)),
-                          // TODO: Angka statis sementara
-                          const Text("45 / 180 Hari", style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary)), 
+                          // Teks sudah dinamis memanggil currentDay!
+                          Text("$currentDay / $totalDays Hari", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary)), 
                         ],
                       ),
                       const SizedBox(height: 12),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(10),
                         child: LinearProgressIndicator(
-                          value: 45 / 180, // Progress statis sementara untuk UI
+                          // Value sudah dinamis (contoh: 4 / 180)
+                          value: currentDay / totalDays, 
                           minHeight: 10,
                           backgroundColor: Colors.grey.shade300,
                           valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
@@ -216,7 +240,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 title: "Keluar",
                 isDestructive: true,
                 onTap: () async {
-                  // Beri nama berbeda pada context dialog agar tidak bentrok
                   bool? confirm = await showDialog(
                     context: context,
                     builder: (dialogContext) => AlertDialog(
@@ -237,7 +260,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     await storage.clearSession();
                     
                     if (context.mounted) {
-                      // Gunakan rootNavigator: true untuk memaksa navigasi dari lapisan paling luar
                       Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                         MaterialPageRoute(builder: (context) => const LandingPage()), 
                         (route) => false,
