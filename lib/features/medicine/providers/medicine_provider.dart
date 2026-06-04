@@ -229,4 +229,18 @@ class MedicineProvider with ChangeNotifier {
       return false;
     }
   }
+
+  // ==========================================
+  // FUNGSI UNTUK MEMBERSIHKAN DATA SAAT LOGOUT
+  // ==========================================
+  void clearData() {
+    _todaySchedules = [];
+    _allMedicines = [];
+    _selectedDateSchedules = [];
+    _dailyLogs = [];
+    _dosisSelesai = 0;
+    _complianceRate = 0.0;
+    _errorMessage = null;
+    notifyListeners();
+  }
 }

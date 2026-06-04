@@ -4,7 +4,7 @@ import 'package:tbcheck_app/core/constants/app_constants.dart';
 import 'package:tbcheck_app/features/auth/data/datasources/auth_storage.dart';
 
 final apiClientProvider = Provider<ApiClient>((ref) {
-  final authStorage = ref.watch(authStorageProvider);
+  final authStorage = ref.read(authStorageProvider);
   return ApiClient(authStorage);
 });
 

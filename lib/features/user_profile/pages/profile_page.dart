@@ -6,6 +6,8 @@ import 'package:tbcheck_app/features/user_profile/data/repositories/user_profile
 import 'package:tbcheck_app/features/user_profile/pages/edit_profile_page.dart';
 import 'package:tbcheck_app/features/user_profile/pages/security_page.dart';
 import 'package:tbcheck_app/features/landing/landing_page.dart';
+import 'package:provider/provider.dart' hide Provider;
+import 'package:tbcheck_app/features/medicine/providers/medicine_provider.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -260,6 +262,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     await storage.clearSession();
                     
                     if (context.mounted) {
+                      context.read<MedicineProvider>().clearData();
+
                       Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                         MaterialPageRoute(builder: (context) => const LandingPage()), 
                         (route) => false,

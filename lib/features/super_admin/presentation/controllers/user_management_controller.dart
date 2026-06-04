@@ -3,11 +3,8 @@ import '../../data/models/user_detail_model.dart';
 import '../../data/models/user_model.dart';
 import '../../data/repositories/user_management_repository.dart';
 
-final userManagementProvider = FutureProvider.autoDispose<List<UserModel>>((
-  ref,
-) async {
+final userManagementProvider = FutureProvider<List<UserModel>>((ref) async {
   final repository = ref.watch(userManagementRepositoryProvider);
-
   return await repository.getAllUsers();
 });
 
