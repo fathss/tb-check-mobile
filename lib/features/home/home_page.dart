@@ -5,6 +5,7 @@ import 'package:tbcheck_app/features/medicine/providers/medicine_provider.dart';
 import 'package:tbcheck_app/features/user_profile/presentation/controllers/user_profile_controller.dart';
 import 'package:tbcheck_app/features/auth/data/datasources/auth_storage.dart';
 import '../notifications/notification_page.dart'; 
+import 'package:tbcheck_app/core/services/location_tracker_service.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   final VoidCallback? onProfileTap; 
@@ -17,6 +18,7 @@ class HomePage extends ConsumerStatefulWidget {
 
 class _HomePageState extends ConsumerState<HomePage> {
   String? currentUserId; 
+  bool _hasTrackedHome = false;
 
   @override
   void initState() {
@@ -48,6 +50,14 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     ref.listen(homeSummaryProvider(currentUserId!), (previous, next) {
       next.whenData((summary) {
+        if (summary.patientId != null && !_hasTrackedHome) {
+          _hasTrackedHome = true;
+          LocationTrackerService.trackAndSend(
+            patientId: summary.patientId!, 
+            activityName: "Membuka Aplikasi"
+          );
+        }
+
         if (summary.patientId != null && medicineProvider.todaySchedules.isEmpty && !medicineProvider.isLoading) {
           context.read<MedicineProvider>().fetchTodaySchedule(summary.patientId!);
         }

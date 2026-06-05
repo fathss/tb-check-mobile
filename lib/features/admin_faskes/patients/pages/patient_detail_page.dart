@@ -17,6 +17,15 @@ class PatientDetailPage extends StatelessWidget {
         ? const Color(0xFF1060EF) 
         : (patient.status.toLowerCase().contains('sembuh') ? Colors.green : Colors.grey);
 
+    // --- LOGIKA FILTER TEKS ALAMAT DUMMY ---
+    String displayAddress = patient.address ?? 'Alamat belum diupdate oleh pasien';
+    // Jika database mengembalikan teks dummy masa lalu, kita timpa!
+    if (displayAddress.toLowerCase().contains('didapatkan dari profil pengguna') || displayAddress.trim().isEmpty) {
+      displayAddress = 'Alamat belum diupdate oleh pasien';
+    }
+    bool isAddressEmpty = displayAddress == 'Alamat belum diupdate oleh pasien';
+    // ---------------------------------------
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
@@ -28,7 +37,6 @@ class PatientDetailPage extends StatelessWidget {
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18)),
         backgroundColor: Colors.white,
         elevation: 0,
-        // --- TAMBAHAN TOMBOL HAPUS (ACTIONS) ---
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
@@ -62,7 +70,6 @@ class PatientDetailPage extends StatelessWidget {
               if (confirm == true) {
                 if (!context.mounted) return;
                 
-                // Tampilkan loading sementara
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text("Menghapus data..."), duration: Duration(seconds: 1))
                 );
@@ -76,7 +83,7 @@ class PatientDetailPage extends StatelessWidget {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("Data pasien berhasil dihapus"), backgroundColor: Colors.green)
                   );
-                  Navigator.pop(context); // Otomatis kembali ke daftar pasien
+                  Navigator.pop(context); 
                 } else {
                   final errorMsg = context.read<PatientProvider>().errorMessage;
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -104,7 +111,6 @@ class PatientDetailPage extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  // Status Badge (Pojok Kanan Atas dalam Card)
                   Align(
                     alignment: Alignment.topRight,
                     child: Container(
@@ -120,7 +126,6 @@ class PatientDetailPage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  // Avatar
                   CircleAvatar(
                     radius: 40,
                     backgroundColor: const Color(0xFFF1F4F8),
@@ -130,7 +135,6 @@ class PatientDetailPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Nama & NIK
                   Text(
                     patient.fullName,
                     style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
@@ -168,6 +172,8 @@ class PatientDetailPage extends StatelessWidget {
               title: 'No. Telepon Aktif',
               value: '0812-3456-7890', 
             ),
+            
+            // --- KARTU LOKASI ---
             Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(12),
@@ -193,9 +199,16 @@ class PatientDetailPage extends StatelessWidget {
                       children: [
                         Text('Alamat Domisili & Titik Peta', style: TextStyle(color: Colors.grey.shade400, fontSize: 12, fontWeight: FontWeight.w500)),
                         const SizedBox(height: 2),
-                        Text(patient.address ?? 'Alamat tidak tersedia', style: const TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.bold)),
+                        // --- TEKS ALAMAT YANG SUDAH DIFILTER ---
+                        Text(
+                          displayAddress, 
+                          style: TextStyle(
+                            color: isAddressEmpty ? Colors.red.shade400 : Colors.black, 
+                            fontSize: 14, 
+                            fontWeight: FontWeight.bold
+                          )
+                        ),
                         const SizedBox(height: 4),
-                        // Menampilkan koordinat GPS
                         Text(
                           (patient.latitude != null && patient.longitude != null) 
                             ? 'Lat: ${patient.latitude!.toStringAsFixed(4)} | Lng: ${patient.longitude!.toStringAsFixed(4)}'
@@ -211,7 +224,7 @@ class PatientDetailPage extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // --- TOMBOL PANTAU OBAT (BARU) ---
+            // --- TOMBOL PANTAU OBAT ---
             SizedBox(
               width: double.infinity,
               height: 54,
@@ -226,7 +239,7 @@ class PatientDetailPage extends StatelessWidget {
                 label: const Text('Pantau Kepatuhan Obat', 
                   style: TextStyle(color: Color(0xFF1060EF), fontWeight: FontWeight.bold, fontSize: 16)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE9F0FF), // Warna biru muda
+                  backgroundColor: const Color(0xFFE9F0FF),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                   elevation: 0,
                 ),
@@ -235,7 +248,7 @@ class PatientDetailPage extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // --- TOMBOL PERBARUI STATUS (LAMA) ---
+            // --- TOMBOL PERBARUI STATUS ---
             SizedBox(
               width: double.infinity,
               height: 54,
@@ -258,7 +271,6 @@ class PatientDetailPage extends StatelessWidget {
     );
   }
 
-  // Widget Helper untuk membuat kartu informasi
   Widget _buildInfoCard({required IconData icon, required String title, required String value}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -270,7 +282,6 @@ class PatientDetailPage extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Icon Box
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -280,7 +291,6 @@ class PatientDetailPage extends StatelessWidget {
             child: Icon(icon, color: const Color(0xFF1060EF), size: 24),
           ),
           const SizedBox(width: 16),
-          // Text Content
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,25 +312,21 @@ class PatientDetailPage extends StatelessWidget {
     );
   }
 
-  // ==========================================
-  // FUNGSI POP-UP PERBARUI STATUS (ESTETIK)
-  // ==========================================
   void _showUpdateStatusDialog(BuildContext context) {
-    // Menyimpan status lokal hanya untuk pop-up ini
     String selectedStatus = patient.status == "Aktif" ? "Aktif Dirawat" : patient.status; 
     TextEditingController notesController = TextEditingController();
     bool isSubmitting = false;
 
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // Penting agar pop-up ikut naik saat keyboard muncul
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (bottomSheetContext) {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return Container(
               padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom, // Menghindari tertutup keyboard
+                bottom: MediaQuery.of(context).viewInsets.bottom,
               ),
               decoration: const BoxDecoration(
                 color: Colors.white,
@@ -332,7 +338,6 @@ class PatientDetailPage extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header Pop-up
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -348,7 +353,6 @@ class PatientDetailPage extends StatelessWidget {
                     const Text('Pilih Status Baru', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 12),
                     
-                    // Pilihan Status (Wrap agar rapi jika kepanjangan)
                     Wrap(
                       spacing: 12,
                       children: ['Aktif Dirawat', 'Sembuh', 'Drop-out'].map((status) {
@@ -372,7 +376,6 @@ class PatientDetailPage extends StatelessWidget {
                     const Text('Catatan Medis (Opsional)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
                     
-                    // Input Catatan
                     TextField(
                       controller: notesController,
                       maxLines: 3,
@@ -390,16 +393,13 @@ class PatientDetailPage extends StatelessWidget {
                     
                     const SizedBox(height: 24),
                     
-                    // Tombol Simpan
                     SizedBox(
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
                         onPressed: isSubmitting ? null : () async {
-                          // Mulai loading di dalam pop-up
                           setModalState(() => isSubmitting = true);
                           
-                          // Eksekusi fungsi ke backend C#
                           bool success = await context.read<PatientProvider>().updatePatientStatus(
                             patient.id.toString(), 
                             selectedStatus, 
@@ -409,8 +409,8 @@ class PatientDetailPage extends StatelessWidget {
                           setModalState(() => isSubmitting = false);
                           
                           if (success) {
-                            Navigator.pop(bottomSheetContext); // Tutup pop-up
-                            Navigator.pop(context); // Kembali ke list utama agar me-refresh data otomatis
+                            Navigator.pop(bottomSheetContext); 
+                            Navigator.pop(context); 
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Status berhasil diperbarui!'), backgroundColor: Colors.green),
                             );

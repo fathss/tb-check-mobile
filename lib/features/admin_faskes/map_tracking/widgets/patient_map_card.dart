@@ -9,8 +9,20 @@ class PatientMapCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    bool isDrop = patient.status.toLowerCase().contains('drop');
-    bool isSembuh = patient.status.toLowerCase().contains('sembuh');
+    String lowerStatus = patient.status.toLowerCase();
+
+    // --- STANDARISASI TEKS BADGE ---
+    String displayStatus = patient.status;
+    if (lowerStatus.contains('aktif')) {
+      displayStatus = 'Aktif';
+    } else if (lowerStatus.contains('drop')) {
+      displayStatus = 'Drop-out';
+    } else if (lowerStatus.contains('sembuh')) {
+      displayStatus = 'Sembuh';
+    }
+
+    bool isDrop = lowerStatus.contains('drop');
+    bool isSembuh = lowerStatus.contains('sembuh');
 
     Color bagColor = const Color(0xFFE9F0FF);
     Color textColor = const Color(0xFF1060EF);
@@ -37,13 +49,22 @@ class PatientMapCard extends StatelessWidget {
         title: Text(patient.fullName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 4),
-          child: Text(patient.address ?? 'Alamat Belum Terisi', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+          child: Text(
+            patient.address != null && patient.address!.isNotEmpty 
+                ? patient.address! 
+                : 'Alamat belum diupdate oleh pasien', 
+            maxLines: 1, 
+            overflow: TextOverflow.ellipsis, 
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade500)
+          ),
         ),
         trailing: Container(
-          padding
-          : const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(color: bagColor, borderRadius: BorderRadius.circular(20)),
-          child: Text(patient.status, style: TextStyle(color: textColor, fontSize: 11, fontWeight: FontWeight.bold)),
+          child: Text(
+            displayStatus, // <--- SEKARANG MENGGUNAKAN TEKS YANG SUDAH DISTANDARISASI
+            style: TextStyle(color: textColor, fontSize: 11, fontWeight: FontWeight.bold)
+          ),
         ),
       ),
     );

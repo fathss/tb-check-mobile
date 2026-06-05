@@ -6,6 +6,7 @@ import '../models/today_schedule_model.dart';
 // --- IMPORT BARU UNTUK ADMIN SURVEILLANCE ---
 import '../../auth/data/datasources/auth_storage.dart';
 import '../models/medication_log_model.dart'; 
+import '../../../core/services/location_tracker_service.dart';
 
 class MedicineProvider with ChangeNotifier {
   // ==========================================
@@ -174,7 +175,20 @@ class MedicineProvider with ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
+        // 1. Tarik ulang jadwal hari ini agar tercentang hijau
         await fetchTodaySchedule(patientId);
+        
+        // --- TAMBAHAN BARU ---
+        // 2. Tarik ulang daftar semua obat agar "Sisa Stok" langsung update di layar!
+        await fetchAllMedicines(patientId);
+        // ---------------------
+
+        // 3. Lacak lokasi saat minum obat
+        LocationTrackerService.trackAndSend(
+          patientId: patientId, 
+          activityName: "Konfirmasi Minum Obat"
+        );
+        
         return true;
       }
       return false;

@@ -18,16 +18,6 @@ class MedicineDaySelector extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
 
       children: [
-        const Text(
-          "Hari per Minggu",
-
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-
         const SizedBox(height: 16),
 
         Row(

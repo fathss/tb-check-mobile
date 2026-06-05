@@ -154,11 +154,11 @@ class _FaskesListBottomSheetState extends State<FaskesListBottomSheet> {
 
     return DraggableScrollableSheet(
       controller: _sheetController,
-      initialChildSize: 0.1,
+      initialChildSize: 0.35,
       minChildSize: 0.1,
       maxChildSize: 0.9,
       snap: true,
-      snapSizes: const [0.1, 0.8, 0.9],
+      snapSizes: const [0.1, 0.35, 0.9],
       builder: (context, scrollController) {
         return Container(
           decoration: BoxDecoration(

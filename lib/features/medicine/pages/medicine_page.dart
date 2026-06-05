@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tbcheck_app/core/theme/app_colors.dart';
 import 'package:tbcheck_app/features/medicine/providers/medicine_provider.dart';
 import 'package:tbcheck_app/features/user_profile/presentation/controllers/user_profile_controller.dart';
-// Sesuaikan import auth_storage ini dengan struktur foldermu
 import 'package:tbcheck_app/features/auth/data/datasources/auth_storage.dart'; 
 
 import '../pages/schedule_page.dart';
@@ -23,49 +22,65 @@ class MedicinePage extends ConsumerStatefulWidget {
 }
 
 class _MedicinePageState extends ConsumerState<MedicinePage> {
-  String? _patientId; // Simpan secara dinamis di sini
+  String? _currentUserId;
+  String? _patientId; 
+  bool _hasFetched = false; // Penanda agar API tidak dipanggil berulang-ulang
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadData();
-    });
+    _loadUserId();
   }
 
-  Future<void> _loadData() async {
-    // 1. Ambil User ID yang sedang login dari storage
+  // --- AMBIL USER ID SECARA ASYNC SEPERTI DI HOME PAGE ---
+  Future<void> _loadUserId() async {
     final storage = ref.read(authStorageProvider);
-    final userId = await storage.getUserId();
-    
-    if (userId != null) {
-      try {
-        // 2. Ambil profil summary untuk mendapatkan Patient ID
-        final summary = await ref.read(homeSummaryProvider(userId).future);
-        
-        setState(() {
-          _patientId = summary.patientId;
-        });
-
-        // 3. Panggil API Obat menggunakan Patient ID asli
-        if (_patientId != null) {
-          if (!mounted) return;
-          context.read<MedicineProvider>().fetchTodaySchedule(_patientId!);
-          context.read<MedicineProvider>().fetchAllMedicines(_patientId!); 
-        }
-      } catch (e) {
-        print("EXCEPTION LOAD DATA: $e");
-      }
+    final id = await storage.getUserId();
+    if (mounted) {
+      setState(() {
+        _currentUserId = id;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Tampilkan loading jika User ID belum didapatkan
+    if (_currentUserId == null) {
+      return const Scaffold(
+        backgroundColor: Colors.white,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // Pantau data Profil Summary menggunakan ID yang valid
+    final summaryAsync = ref.watch(homeSummaryProvider(_currentUserId!));
+
     final medicineProvider = context.watch<MedicineProvider>();
     final todaySchedules = medicineProvider.todaySchedules;
-    
     final allMedicines = medicineProvider.allMedicines;
     final recentMedicines = allMedicines.take(2).toList(); 
+
+    // --- CARA AMAN MEMANGGIL API TANPA LOOPING ---
+    summaryAsync.whenData((summary) {
+      if (summary.patientId != null) {
+        // Simpan patient ID untuk dipakai oleh widget anak (Schedule Card)
+        if (_patientId != summary.patientId) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            setState(() => _patientId = summary.patientId);
+          });
+        }
+
+        // Panggil API HANYA jika datanya belum pernah di-fetch di sesi ini
+        if (!_hasFetched && !medicineProvider.isLoading) {
+          _hasFetched = true; // Kunci agar tidak looping
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            context.read<MedicineProvider>().fetchTodaySchedule(summary.patientId!);
+            context.read<MedicineProvider>().fetchAllMedicines(summary.patientId!);
+          });
+        }
+      }
+    });
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -102,7 +117,7 @@ class _MedicinePageState extends ConsumerState<MedicinePage> {
                   ...todaySchedules.map((schedule) {
                     return MedicineScheduleCard(
                       scheduleId: schedule.scheduleId,
-                      patientId: _patientId ?? "", // Kirim ID yang sudah dinamis
+                      patientId: _patientId ?? "", // ID dinamis
                       time: schedule.time,
                       medicineName: schedule.title,
                       description: schedule.subtitle,
@@ -127,7 +142,9 @@ class _MedicinePageState extends ConsumerState<MedicinePage> {
                 ),
                 const SizedBox(height: 24),
 
-                if (recentMedicines.isEmpty)
+                if (medicineProvider.isLoading && recentMedicines.isEmpty)
+                  const Center(child: CircularProgressIndicator())
+                else if (recentMedicines.isEmpty)
                   Center(child: Padding(padding: const EdgeInsets.symmetric(vertical: 20), child: Text("Belum ada obat yang ditambahkan", style: TextStyle(color: Colors.grey.shade500))))
                 else
                   ...recentMedicines.map((med) {

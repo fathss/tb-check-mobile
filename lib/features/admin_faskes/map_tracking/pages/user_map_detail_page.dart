@@ -1,22 +1,67 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // Tambahkan package intl untuk memformat tanggal
+import 'package:intl/intl.dart';
+import 'package:geocoding/geocoding.dart'; // Import Geocoding
 import '../../patients/models/patient_model.dart';
 import '../widgets/info_system_card.dart';
 import 'user_location_history_page.dart';
 
-class UserMapDetailPage extends StatelessWidget {
+class UserMapDetailPage extends StatefulWidget {
   final PatientModel patient;
 
   const UserMapDetailPage({Key? key, required this.patient}) : super(key: key);
 
-  // Fungsi bantuan untuk memformat tanggal diagnosis menjadi teks yang rapi
+  @override
+  State<UserMapDetailPage> createState() => _UserMapDetailPageState();
+}
+
+class _UserMapDetailPageState extends State<UserMapDetailPage> {
+  String _currentAddress = 'Mencari alamat...';
+
+  @override
+  void initState() {
+    super.initState();
+    _getAddressFromCoordinates();
+  }
+
+  // --- MENDAPATKAN ALAMAT DARI LATITUDE & LONGITUDE ---
+  Future<void> _getAddressFromCoordinates() async {
+    if (widget.patient.latitude == null || widget.patient.longitude == null) {
+      setState(() => _currentAddress = 'Koordinat lokasi tidak tersedia');
+      return;
+    }
+
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+          widget.patient.latitude!, widget.patient.longitude!);
+      
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        String addressText = "${place.street}, ${place.subLocality}, ${place.locality}";
+        addressText = addressText.replaceAll(', ,', ',').replaceAll(' ,', '').trim();
+        
+        setState(() => _currentAddress = addressText);
+      } else {
+        setState(() => _currentAddress = 'Alamat tidak ditemukan');
+      }
+    } catch (e) {
+      // Jika geocoding gagal (misal tidak ada internet), pakai teks bawaan atau lat/lng
+      setState(() {
+         if (widget.patient.address != null && widget.patient.address!.isNotEmpty) {
+             _currentAddress = widget.patient.address!;
+         } else {
+             _currentAddress = 'Alamat tidak tertera (Lat: ${widget.patient.latitude}, Lng: ${widget.patient.longitude})';
+         }
+      });
+    }
+  }
+
   String _formatDate(DateTime date) {
     return DateFormat('dd MMMM yyyy', 'id_ID').format(date);
   }
 
   @override
   Widget build(BuildContext context) {
-    String initial = patient.fullName.isNotEmpty ? patient.fullName[0].toUpperCase() : 'U';
+    String initial = widget.patient.fullName.isNotEmpty ? widget.patient.fullName[0].toUpperCase() : 'U';
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -40,9 +85,9 @@ class UserMapDetailPage extends StatelessWidget {
                   style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1060EF))),
             ),
             const SizedBox(height: 16),
-            Text(patient.fullName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(widget.patient.fullName, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            _buildStatusChip(patient.status),
+            _buildStatusChip(widget.patient.status),
             
             const SizedBox(height: 40),
             
@@ -52,13 +97,11 @@ class UserMapDetailPage extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             
-            // KOTAK INFO SEKARANG SEPENUHNYA MENGGUNAKAN DATA ASLI
+            // KOTAK INFO SEKARANG MENAMPILKAN HASIL GEOCODING
             InfoSystemCard(
-              address: (patient.address == null || patient.address!.isEmpty)
-                  ? 'Alamat tidak tertera (Lat: ${patient.latitude}, Lng: ${patient.longitude})'
-                  : patient.address!,
-              phone: 'NIK: ${patient.nik}', // Karena nomor telepon tidak ada di DB, kita tampilkan NIK sebagai identitas unik pasien
-              lastUpdate: _formatDate(patient.diagnosisDate), // Menggunakan tanggal diagnosis asli dari NeonDB
+              address: _currentAddress,
+              phone: 'NIK: ${widget.patient.nik}',
+              lastUpdate: _formatDate(widget.patient.diagnosisDate), 
             ),
             
             const Spacer(),
@@ -73,11 +116,10 @@ class UserMapDetailPage extends StatelessWidget {
                   elevation: 0,
                 ),
                 onPressed: () {
-                  // Kirim data ID pasien ke halaman riwayat agar bisa di-hit ke API PatientHistories
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => UserLocationHistoryPage(patient: patient),
+                      builder: (_) => UserLocationHistoryPage(patient: widget.patient),
                     ),
                   );
                 },
@@ -92,9 +134,21 @@ class UserMapDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusChip(String status) {
-    bool isDrop = status.toLowerCase().contains('drop');
-    bool isSembuh = status.toLowerCase().contains('sembuh');
+  Widget _buildStatusChip(String rawStatus) {
+    String lowerStatus = rawStatus.toLowerCase();
+    
+    // --- STANDARISASI TEKS BADGE ---
+    String displayStatus = rawStatus;
+    if (lowerStatus.contains('aktif')) {
+      displayStatus = 'Aktif';
+    } else if (lowerStatus.contains('drop')) {
+      displayStatus = 'Drop-out';
+    } else if (lowerStatus.contains('sembuh')) {
+      displayStatus = 'Sembuh';
+    }
+
+    bool isDrop = lowerStatus.contains('drop');
+    bool isSembuh = lowerStatus.contains('sembuh');
     
     Color bagColor = const Color(0xFFE9F0FF);
     Color textColor = const Color(0xFF1060EF);
@@ -114,7 +168,7 @@ class UserMapDetailPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        status,
+        displayStatus,
         style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.bold),
       ),
     );

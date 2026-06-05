@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:workmanager/workmanager.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:tbcheck_app/core/constants/app_constants.dart';
+import 'package:geocoding/geocoding.dart';
 
 // Nama Task yang akan dipanggil oleh Workmanager
 const fetchBackgroundLocationTask = "fetchBackgroundLocationTask";
@@ -65,6 +66,20 @@ void callbackDispatcher() {
         final position = await Geolocator.getCurrentPosition(
             desiredAccuracy: LocationAccuracy.high);
 
+        String addressText = "Lokasi terdeteksi";
+        try {
+          List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+          if (placemarks.isNotEmpty) {
+            Placemark place = placemarks[0];
+            addressText = "${place.street}, ${place.subLocality}, ${place.locality}";
+            addressText = addressText.replaceAll(', ,', ',').replaceAll(' ,', '').trim();
+          }
+        } catch (e) {
+          debugPrint("Geocoding Background Gagal: $e");
+        }
+
+        String finalDesc = "Update lokasi otomatis (Background)\n📍 $addressText";
+
         // 4. Kirim ke Database C#
         final locationUrl = '${AppConstants.baseUrl}/Patient/$patientId/locations';
         final response = await http.post(
@@ -76,7 +91,7 @@ void callbackDispatcher() {
           body: jsonEncode({
             "latitude": position.latitude,
             "longitude": position.longitude,
-            "activityDescription": "Update lokasi otomatis (Background)"
+            "activityDescription": finalDesc // Ganti dengan variabel teks yang baru
           }),
         );
 
