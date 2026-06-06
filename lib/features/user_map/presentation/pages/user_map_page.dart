@@ -189,62 +189,98 @@ class _UserMapPageState extends ConsumerState<UserMapPage> {
   }
 
   Future<void> getPolylines(LatLng destination) async {
-    final polylinePoints = PolylinePoints(apiKey: googleApiKey);
+    if (_currentPosition == null) return;
 
-    final result = await polylinePoints.getRouteBetweenCoordinates(
-      request: PolylineRequest(
-        origin: PointLatLng(
-          _currentPosition!.latitude,
-          _currentPosition!.longitude,
-        ),
-        destination: PointLatLng(destination.latitude, destination.longitude),
-        mode: TravelMode.driving,
-      ),
-    );
+    try {
+      final Uri url = Uri.https(
+        'routes.googleapis.com',
+        '/directions/v2:computeRoutes',
+      );
+      // Routes API (New) menggunakan POST request dengan headers khusus
+      final response = await http.post(
+        url, // Langsung masukkan objek url di sini
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': googleApiKey,
+          'X-Goog-FieldMask': 'routes.polyline.encodedPolyline',
+        },
+        body: jsonEncode({
+          "origin": {
+            "location": {
+              "latLng": {
+                "latitude": _currentPosition!.latitude,
+                "longitude": _currentPosition!.longitude
+              }
+            }
+          },
+          "destination": {
+            "location": {
+              "latLng": {
+                "latitude": destination.latitude,
+                "longitude": destination.longitude
+              }
+            }
+          },
+          "travelMode": "drive",
+          "routingPreference": "traffic_unaware",
+          "polylineQuality": "high_quality"
+        }),
+      );
 
-    if (result.points.isNotEmpty) {
-      final polylineCoordinates = <LatLng>[];
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        
+        if (data['routes'] != null && (data['routes'] as List).isNotEmpty) {
+          final String encodedPolyline = data['routes'][0]['polyline']['encodedPolyline'];
+          final List<PointLatLng> decodedPoints = PolylinePoints.decodePolyline(encodedPolyline);
 
-      for (final point in result.points) {
-        polylineCoordinates.add(LatLng(point.latitude, point.longitude));
+          final List<LatLng> polylineCoordinates = decodedPoints
+              .map((point) => LatLng(point.latitude, point.longitude))
+              .toList();
+
+          setState(() {
+            _polylines.clear();
+            _polylines.add(
+              Polyline(
+                polylineId: const PolylineId('asli_rute'),
+                color: Colors.blue,
+                points: polylineCoordinates,
+                width: 5,
+              ),
+            );
+          });
+
+          if (_mapController != null) {
+            final userPos = LatLng(
+              _currentPosition!.latitude,
+              _currentPosition!.longitude,
+            );
+
+            final bounds = LatLngBounds(
+              southwest: LatLng(
+                math.min(userPos.latitude, destination.latitude),
+                math.min(userPos.longitude, destination.longitude),
+              ),
+              northeast: LatLng(
+                math.max(userPos.latitude, destination.latitude),
+                math.max(userPos.longitude, destination.longitude),
+              ),
+            );
+
+            await _mapController!.animateCamera(
+              CameraUpdate.newLatLngBounds(bounds, 100),
+            );
+          }
+        } else {
+          debugPrint('Rute tidak ditemukan dalam response.');
+        }
+      } else {
+        // Tampilkan log error spesifik dari Google di console untuk debugging
+        debugPrint('Gagal mengambil rute: HTTP ${response.statusCode}');
+        debugPrint('Response Body: ${response.body}');
       }
-
-      setState(() {
-        _polylines.clear();
-        _polylines.add(
-          Polyline(
-            polylineId: const PolylineId('asli_rute'),
-            color: Colors.blue,
-            points: polylineCoordinates,
-            width: 5,
-          ),
-        );
-      });
-
-      if (_mapController != null) {
-        final userPos = LatLng(
-          _currentPosition!.latitude,
-          _currentPosition!.longitude,
-        );
-
-        final bounds = LatLngBounds(
-          southwest: LatLng(
-            math.min(userPos.latitude, destination.latitude),
-            math.min(userPos.longitude, destination.longitude),
-          ),
-          northeast: LatLng(
-            math.max(userPos.latitude, destination.latitude),
-            math.max(userPos.longitude, destination.longitude),
-          ),
-        );
-
-        await _mapController!.animateCamera(
-          CameraUpdate.newLatLngBounds(bounds, 100),
-        );
-      }
-    } else {
-      // ignore: avoid_print
-      print('Gagal mengambil rute: ${result.errorMessage}');
+    } catch (e) {
+      debugPrint('Terjadi kesalahan saat mengambil rute: $e');
     }
   }
 

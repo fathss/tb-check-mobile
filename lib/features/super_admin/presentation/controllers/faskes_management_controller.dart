@@ -94,4 +94,9 @@ class FaskesMutationController {
     final repository = _ref.read(faskesManagementRepositoryProvider);
     return repository.updateFaskes(faskesId, request);
   }
+
+  Future<String> deleteFaskes(String faskesId) async {
+    final repository = _ref.read(faskesManagementRepositoryProvider);
+    return await repository.deleteFaskes(faskesId);
+  }
 }

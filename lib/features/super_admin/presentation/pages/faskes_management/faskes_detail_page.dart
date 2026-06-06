@@ -54,7 +54,52 @@ class _FaskesDetailPageState extends ConsumerState<FaskesDetailPage> {
         ),
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () async {
+              // 1. Confirm
+              final confirm = await showDialog<bool?>(
+                context: context,
+                builder: (dialogContext) => AlertDialog(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  title: const Text('Hapus Faskes?', style: TextStyle(fontWeight: FontWeight.bold)),
+                  content: const Text('Yakin ingin menghapus faskes ini? Tindakan ini tidak dapat dibatalkan.'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialogContext, false),
+                      child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+                      onPressed: () => Navigator.pop(dialogContext, true),
+                      child: const Text('Hapus', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm != true) return;
+
+              if (!mounted) return;
+
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Menghapus faskes...')));
+
+              try {
+                final mutation = ref.read(faskesMutationControllerProvider);
+                final msg = await mutation.deleteFaskes(widget.faskesId);
+
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.green));
+
+                // Invalidate providers and go back
+                ref.invalidate(faskesManagementProvider);
+                Navigator.pop(context);
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                final errorMsg = e.toString();
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMsg), backgroundColor: Colors.red));
+              }
+            },
             icon: const Icon(Icons.delete_outline, color: AppColors.error),
           ),
           const SizedBox(width: 8),

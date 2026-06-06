@@ -102,4 +102,21 @@ class FaskesManagementDatasource {
       throw Exception('Terjadi kesalahan saat memperbarui faskes');
     }
   }
+
+  Future<String> deleteFaskes(String faskesId) async {
+    try {
+      final response = await _apiClient.dio.delete('/faskes/$faskesId');
+      final payload = response.data;
+
+      if (payload is Map<String, dynamic>) {
+        return payload['message']?.toString() ?? 'Berhasil menghapus faskes';
+      }
+
+      return 'Berhasil menghapus faskes';
+    } on DioException catch (e) {
+      throw Exception(e.message ?? 'Gagal menghapus faskes');
+    } catch (e) {
+      throw Exception('Terjadi kesalahan saat menghapus faskes');
+    }
+  }
 }

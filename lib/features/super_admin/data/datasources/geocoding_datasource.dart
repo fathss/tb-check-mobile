@@ -12,29 +12,35 @@ class GeocodingDatasource {
   Future<String> getAddressFromCoordinate(double lat, double lng) async {
     try {
       final response = await _dio.get(
-        'https://maps.googleapis.com/maps/api/geocode/json',
+        'https://geocode.googleapis.com/v4/geocode/location/$lat,$lng',
         queryParameters: {
-          'latlng': '$lat,$lng',
           'key': AppConstants.googleMapsKey,
-          'language': 'id', // Memastikan alamat dalam Bahasa Indonesia
+          'languageCode': 'id', 
         },
       );
 
-      if (response.data['status'] == 'OK') {
-        // 'results' mengembalikan array alamat. Indeks 0 adalah yang paling spesifik/detail.
+      // 1. API v4 langsung mengembalikan data jika sukses (HTTP 200). 
+      // Kita langsung cek apakah ada objek 'results' dan tipenya List.
+      if (response.data != null && response.data['results'] is List) {
         final results = response.data['results'] as List;
+        
         if (results.isNotEmpty) {
-          return results[0]['formatted_address'] as String;
+          // 2. PERUBAHAN UTAMA: Gunakan 'formattedAddress' (camelCase), bukan 'formatted_address'
+          final firstResult = results[0];
+          if (firstResult['formattedAddress'] != null) {
+            return firstResult['formattedAddress'] as String;
+          }
         }
-      } else {
-        throw Exception(
-          response.data['error_message'] ?? 'Gagal mengambil alamat',
-        );
       }
 
       throw Exception('Alamat tidak ditemukan untuk koordinat tersebut');
     } on DioException catch (e) {
-      throw Exception(e.message ?? 'Gagal menghubungi server Google Maps');
+      // 3. API v4 mengembalikan detail error di dalam response.data['error'] jika HTTP status ganti (4xx/5xx)
+      String errorMessage = 'Gagal menghubungi server Google Maps';
+      if (e.response?.data != null && e.response?.data['error'] != null) {
+        errorMessage = e.response?.data['error']['message'] ?? errorMessage;
+      }
+      throw Exception(errorMessage);
     } catch (e) {
       throw Exception('Terjadi kesalahan saat memproses data alamat');
     }

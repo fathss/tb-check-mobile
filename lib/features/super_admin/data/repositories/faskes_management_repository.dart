@@ -50,4 +50,12 @@ class FaskesManagementRepository {
       throw Exception('Gagal memperbarui faskes: ${e.toString()}');
     }
   }
+
+  Future<String> deleteFaskes(String faskesId) async {
+    try {
+      return await _datasource.deleteFaskes(faskesId);
+    } catch (e) {
+      throw Exception('Gagal menghapus faskes: ${e.toString()}');
+    }
+  }
 }
